@@ -153,6 +153,9 @@ def update_user(user_id):
         log_audit(caller_id, action, tenant_id=tenant_id, resource_type='user', resource_id=user_id)
     db.session.commit()
     return jsonify(user.to_dict())
+
+
+@users_bp.route('/role-configs', methods=['GET'])
 @jwt_required()
 @tenant_required
 def list_role_configs():

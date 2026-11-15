@@ -13,8 +13,8 @@ class Config:
 
     # JWT
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'dev-jwt-secret-change-in-production')
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=8)
-    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=4)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(hours=4)
 
     # CORS
     CORS_ORIGINS = [o.strip() for o in os.environ.get(

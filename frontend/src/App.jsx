@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
@@ -157,6 +157,19 @@ function ForcePasswordChangeModal() {
 }
 
 export default function App() {
+  const { isSessionExpired, logout, token } = useAuthStore()
+
+  useEffect(() => {
+    if (!token) return
+    const interval = setInterval(() => {
+      if (isSessionExpired()) {
+        logout()
+        window.location.href = '/login'
+      }
+    }, 60 * 1000)
+    return () => clearInterval(interval)
+  }, [token])
+
   return (
     <>
       <ForcePasswordChangeModal />

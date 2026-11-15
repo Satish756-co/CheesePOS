@@ -24,9 +24,10 @@ export const useAuthStore = create(
       token: null,
       refreshToken: null,
       effectivePermissions: null,
+      sessionExpiry: null,
 
       setAuth: (user, tenant, token, refreshToken, effectivePermissions = null) =>
-        set({ user, tenant, token, refreshToken, effectivePermissions }),
+        set({ user, tenant, token, refreshToken, effectivePermissions, sessionExpiry: Date.now() + 4 * 60 * 60 * 1000 }),
 
       setToken: (token) => set({ token }),
 
@@ -50,7 +51,12 @@ export const useAuthStore = create(
         }
       },
 
-      logout: () => set({ user: null, tenant: null, token: null, refreshToken: null, effectivePermissions: null }),
+      logout: () => set({ user: null, tenant: null, token: null, refreshToken: null, effectivePermissions: null, sessionExpiry: null }),
+
+      isSessionExpired: () => {
+        const expiry = get().sessionExpiry
+        return expiry !== null && Date.now() > expiry
+      },
 
       isAuthenticated: () => !!get().token,
 
@@ -162,6 +168,7 @@ export const useAuthStore = create(
         token: state.token,
         refreshToken: state.refreshToken,
         effectivePermissions: state.effectivePermissions,
+        sessionExpiry: state.sessionExpiry,
       }),
     }
   )

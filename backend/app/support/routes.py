@@ -126,6 +126,8 @@ def list_tickets():
     claims = get_jwt()
     tenant_id = claims.get('tenant_id')
     is_super_admin = claims.get('is_super_admin', False)
+    role = claims.get('role')
+    user_id = int(get_jwt_identity())
     status = request.args.get('status')
     page = request.args.get('page', 1, type=int)
 
@@ -133,6 +135,8 @@ def list_tickets():
     q = SupportTicket.query.options(joinedload(SupportTicket.tenant))
     if not is_super_admin:
         q = q.filter_by(tenant_id=tenant_id)
+        if role not in ('owner', 'admin'):
+            q = q.filter_by(raised_by=user_id)
     if status:
         q = q.filter_by(status=status)
 
@@ -212,10 +216,14 @@ def get_unread_count():
     claims = get_jwt()
     tenant_id = claims.get('tenant_id')
     is_super_admin = claims.get('is_super_admin', False)
+    role = claims.get('role')
+    user_id = int(get_jwt_identity())
 
     q = SupportTicket.query
     if not is_super_admin:
         q = q.filter_by(tenant_id=tenant_id)
+        if role not in ('owner', 'admin'):
+            q = q.filter_by(raised_by=user_id)
 
     if is_super_admin:
         count = q.filter(
