@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: barpro_db
+      POSTGRES_USER: barpro_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-barpro_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U barpro_user -d barpro_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-change-redis-password-in-production}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-change-redis-password-in-production}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=${FLASK_ENV:-development}
+      - DATABASE_URL=postgresql://barpro_user:${DB_PASSWORD:-barpro_secret}@postgres:5432/barpro_db
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-change-redis-password-in-production}@redis:6379/0
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-this-in-production}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-}
+      - MAIL_SERVER=${MAIL_SERVER:-smtp.gmail.com}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - MAIL_DEFAULT_SENDER=${MAIL_DEFAULT_SENDER:-CheesePOS <noreply@cheesepos.com>}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      - SUPER_ADMIN_EMAIL=${SUPER_ADMIN_EMAIL:-admin@barpro.in}
+      - SUPER_ADMIN_PASSWORD=${SUPER_ADMIN_PASSWORD:-Admin@123}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - backend_uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_BACKEND_URL=http://backend:5000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deployment/nginx.conf:/etc/nginx/nginx.conf:ro
+      - certbot_conf:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot
+    depends_on:
+      - frontend
+      - backend
+    # Reload every 6 h so renewed certificates are picked up automatically
+    command: >
+      /bin/sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done &
+      nginx -g 'daemon off;'"
+
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    # Auto-renew every 12 h (certbot only acts when < 30 days remain)
+    entrypoint: >
+      /bin/sh -c "trap exit TERM;
+      while :; do certbot renew; sleep 12h & wait $${!}; done;"
+
+volumes:
+  postgres_data:
+  backend_uploads:
+  certbot_conf:
+  certbot_www:
