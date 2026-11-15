@@ -1,22 +1,22 @@
 #!/bin/bash
-# BarPro VPS deployment script
+# CheesePOS – Full deployment with SSL
 # Usage: bash deployment/deploy.sh yourdomain.com your@email.com
 set -e
 
 DOMAIN=${1:?"Usage: $0 <domain> <email>"}
 EMAIL=${2:?"Usage: $0 <domain> <email>"}
 
-echo "==> Deploying BarPro for domain: $DOMAIN"
+echo "==> Deploying CheesePOS for domain: $DOMAIN"
 
-# 1. Replace DOMAIN_PLACEHOLDER in nginx.conf
-sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" deployment/nginx.conf
-echo "    nginx.conf updated with $DOMAIN"
+# 1. Inject domain into nginx HTTPS config
+sed -i "s/YOUR_DOMAIN_HERE/$DOMAIN/g" deployment/nginx.conf.https
+echo "    nginx.conf.https updated with $DOMAIN"
 
-# 2. Start everything except nginx first (no certs yet)
+# 2. Start backend + frontend (no nginx yet)
 docker compose up -d postgres redis backend frontend
 echo "    Backend + frontend started"
 
-# 3. Start nginx with a temporary HTTP-only config for the ACME challenge
+# 3. Temporary HTTP nginx for ACME challenge
 cat > /tmp/nginx-init.conf << EOF
 worker_processes 1;
 events { worker_connections 1024; }
@@ -25,7 +25,7 @@ http {
         listen 80;
         server_name $DOMAIN www.$DOMAIN;
         location /.well-known/acme-challenge/ { root /var/www/certbot; }
-        location / { return 200 'BarPro initializing...'; add_header Content-Type text/plain; }
+        location / { return 200 'CheesePOS initializing...'; add_header Content-Type text/plain; }
     }
 }
 EOF
@@ -34,14 +34,14 @@ docker run --rm -d \
   --name nginx-init \
   -p 80:80 \
   -v /tmp/nginx-init.conf:/etc/nginx/nginx.conf:ro \
-  -v barpro_certbot_www:/var/www/certbot \
+  -v certbot_www:/var/www/certbot \
   nginx:alpine
 echo "    Temporary HTTP nginx started for ACME challenge"
 
-# 4. Obtain the certificate
+# 4. Obtain SSL certificate
 docker run --rm \
-  -v barpro_certbot_conf:/etc/letsencrypt \
-  -v barpro_certbot_www:/var/www/certbot \
+  -v certbot_conf:/etc/letsencrypt \
+  -v certbot_www:/var/www/certbot \
   certbot/certbot certonly \
     --webroot \
     --webroot-path=/var/www/certbot \
@@ -52,14 +52,11 @@ docker run --rm \
     -d "www.$DOMAIN"
 echo "    SSL certificate obtained"
 
-# 5. Stop the temporary nginx
+# 5. Stop temp nginx, activate production HTTPS config
 docker stop nginx-init
-echo "    Temporary nginx stopped"
-
-# 6. Start the real nginx (with HTTPS)
-docker compose up -d nginx certbot
+cp deployment/nginx.conf.https deployment/nginx.conf
+docker compose up -d nginx
 echo "    Production nginx started with HTTPS"
 
 echo ""
-echo "==> Done! BarPro is live at https://$DOMAIN"
-echo "    Certificates auto-renew every 12 hours."
+echo "==> Done! CheesePOS is live at https://$DOMAIN"
