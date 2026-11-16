@@ -64,7 +64,7 @@ export default function Billing() {
   const { data: productData } = useQuery({
     queryKey: ['products', search, selectedCategory],
     queryFn: () => productsAPI.list({
-      search, category_id: selectedCategory, include_variants: true, per_page: 60
+      search, category_id: selectedCategory, include_variants: true, per_page: 60, for_billing: true
     }).then(r => r.data),
   })
 
@@ -85,14 +85,20 @@ export default function Billing() {
   // Stock data is considered ready only after the query has completed for the selected outlet
   const stockReady = !!selectedOutletId && !stockLoading && !!stockData
   const isOOS = (productId, variantId) => {
-    if (!stockReady) return false  // still loading — don't show OOS yet
+    const product = products.find(p => p.id === productId)
+    if (product?.force_out_of_stock) return true  // manual override
+    if (!stockReady) return false
     const s = stockMap[variantId ? `v${variantId}` : `p${productId}`]
-    return s === undefined || s <= 0  // no stock record OR zero stock = OOS
+    return s === undefined || s <= 0
   }
 
   const handleAddProduct = (product, variant = null) => {
     if (!selectedOutletId) {
       toast.error('Please select an outlet first')
+      return
+    }
+    if (product.force_out_of_stock) {
+      toast.error('This item is marked as out of stock')
       return
     }
     const stockKey = variant ? `v${variant.id}` : `p${product.id}`

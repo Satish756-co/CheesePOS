@@ -103,7 +103,7 @@ export default function TableBilling() {
 
   const { data: productData } = useQuery({
     queryKey: ['products', search, selectedCategory],
-    queryFn: () => productsAPI.list({ search, category_id: selectedCategory, include_variants: true, per_page: 60 }).then(r => r.data),
+    queryFn: () => productsAPI.list({ search, category_id: selectedCategory, include_variants: true, per_page: 60, for_billing: true }).then(r => r.data),
   })
 
   const products = productData?.products || []
@@ -121,6 +121,8 @@ export default function TableBilling() {
   })
   const stockReady = !!selectedOutletId && !stockLoading && !!stockData
   const isOOS = (productId, variantId) => {
+    const product = products.find(p => p.id === productId)
+    if (product?.force_out_of_stock) return true
     if (!stockReady) return false
     const s = stockMap[variantId ? `v${variantId}` : `p${productId}`]
     return s === undefined || s <= 0
@@ -163,6 +165,7 @@ export default function TableBilling() {
   // Add a product to the pending cart
   const handleAddProduct = (product, variant = null) => {
     if (!selectedTable) { toast.error('Select a table first'); return }
+    if (product.force_out_of_stock) { toast.error('This item is marked as out of stock'); return }
     const stockKey = variant ? `v${variant.id}` : `p${product.id}`
     if (stockReady) {
       const available = stockMap[stockKey] ?? 0

@@ -52,6 +52,8 @@ class Product(db.Model, TimestampMixin):
     is_liquor = db.Column(db.Boolean, default=False)
     requires_kot = db.Column(db.Boolean, default=True)
     is_active = db.Column(db.Boolean, default=True)
+    force_out_of_stock = db.Column(db.Boolean, default=False)  # manual OOS override regardless of stock
+    is_hidden = db.Column(db.Boolean, default=False)           # hide from billing screens
     low_stock_threshold = db.Column(db.Numeric(10, 3), default=10)
     barcode = db.Column(db.String(50))
     hsn_code = db.Column(db.String(20))
@@ -80,6 +82,8 @@ class Product(db.Model, TimestampMixin):
             'is_liquor': self.is_liquor,
             'requires_kot': self.requires_kot,
             'is_active': self.is_active,
+            'force_out_of_stock': self.force_out_of_stock,
+            'is_hidden': self.is_hidden,
             'image_url': self.image_url,
             'barcode': self.barcode,
         }

@@ -20,6 +20,7 @@ def list_products():
     search = request.args.get('search', '')
     is_active = request.args.get('is_active', 'true').lower() == 'true'
     include_variants = request.args.get('include_variants', 'false').lower() == 'true'
+    for_billing = request.args.get('for_billing', 'false').lower() == 'true'
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 50, type=int)
 
@@ -28,6 +29,8 @@ def list_products():
         q = q.filter(Product.is_active.is_not(False))
     else:
         q = q.filter(Product.is_active == False)
+    if for_billing:
+        q = q.filter(Product.is_hidden.is_not(True))
     if category_id:
         q = q.filter_by(category_id=category_id)
     if product_type:
@@ -134,7 +137,8 @@ def update_product(product_id):
             return jsonify({'error': 'selling_price must be a valid number'}), 400
 
     for field in ['name', 'brand', 'sku', 'selling_price', 'purchase_price', 'mrp',
-                  'tax_category', 'is_active', 'requires_kot', 'low_stock_threshold']:
+                  'tax_category', 'is_active', 'requires_kot', 'low_stock_threshold',
+                  'force_out_of_stock', 'is_hidden']:
         if field in data:
             setattr(product, field, data[field])
 

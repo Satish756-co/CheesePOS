@@ -5,7 +5,7 @@ import { formatCurrency } from '@/utils/formatters'
 import { exportToExcel, PRODUCTS_COLUMNS } from '@/utils/exportExcel'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
-import { Plus, Search, Edit2, Package, X, Tag, Download, Camera, ImageOff } from 'lucide-react'
+import { Plus, Search, Edit2, Package, X, Tag, Download, Camera, ImageOff, EyeOff, Eye, Ban } from 'lucide-react'
 
 const PRODUCT_TYPES = ['food', 'liquor', 'beverage']
 const TAX_CATEGORIES = [
@@ -325,6 +325,11 @@ export default function Products() {
     mutationFn: ({ id, data }) => productsAPI.update(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); toast.success('Product updated') },
   })
+  const toggleProduct = useMutation({
+    mutationFn: ({ id, field, value }) => productsAPI.toggle(id, field, value),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+    onError: () => toast.error('Failed to update'),
+  })
 
   const products = productData?.products || []
 
@@ -372,6 +377,7 @@ export default function Products() {
               <th className="table-header">Price</th>
               <th className="table-header">Tax</th>
               <th className="table-header">Status</th>
+              <th className="table-header">Billing</th>
               <th className="table-header">Actions</th>
             </tr>
           </thead>
@@ -406,6 +412,24 @@ export default function Products() {
                   <span className={`badge ${p.is_active ? 'badge-green' : 'badge-red'}`}>
                     {p.is_active ? 'Active' : 'Inactive'}
                   </span>
+                </td>
+                <td className="table-cell">
+                  <div className="flex items-center gap-2">
+                    <button
+                      title={p.force_out_of_stock ? 'Marked as Out of Stock — click to undo' : 'Mark as Out of Stock'}
+                      onClick={() => toggleProduct.mutate({ id: p.id, field: 'force_out_of_stock', value: !p.force_out_of_stock })}
+                      className={`p-1.5 rounded-lg transition-colors ${p.force_out_of_stock ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'text-gray-300 hover:bg-gray-100 hover:text-gray-600'}`}
+                    >
+                      <Ban size={14} />
+                    </button>
+                    <button
+                      title={p.is_hidden ? 'Hidden from billing — click to show' : 'Hide from billing screens'}
+                      onClick={() => toggleProduct.mutate({ id: p.id, field: 'is_hidden', value: !p.is_hidden })}
+                      className={`p-1.5 rounded-lg transition-colors ${p.is_hidden ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' : 'text-gray-300 hover:bg-gray-100 hover:text-gray-600'}`}
+                    >
+                      {p.is_hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
                 </td>
                 <td className="table-cell">
                   <button

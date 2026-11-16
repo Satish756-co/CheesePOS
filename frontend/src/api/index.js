@@ -69,6 +69,7 @@ export const productsAPI = {
   list: (params) => api.get('/products/', { params }),
   create: (data) => api.post('/products/', data),
   update: (id, data) => api.put(`/products/${id}`, data),
+  toggle: (id, field, value) => api.put(`/products/${id}`, { [field]: value }),
   get: (id) => api.get(`/products/${id}`),
   listCategories: () => api.get('/products/categories'),
   createCategory: (data) => api.post('/products/categories', data),
