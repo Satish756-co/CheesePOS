@@ -102,7 +102,7 @@ export default function TableBilling() {
   })
 
   const { data: productData } = useQuery({
-    queryKey: ['products', search, selectedCategory],
+    queryKey: ['products-billing', search, selectedCategory],
     queryFn: () => productsAPI.list({ search, category_id: selectedCategory, include_variants: true, per_page: 60, for_billing: true }).then(r => r.data),
   })
 

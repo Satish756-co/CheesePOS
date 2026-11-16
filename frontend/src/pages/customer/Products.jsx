@@ -327,7 +327,10 @@ export default function Products() {
   })
   const toggleProduct = useMutation({
     mutationFn: ({ id, field, value }) => productsAPI.toggle(id, field, value),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] })
+      qc.invalidateQueries({ queryKey: ['products-billing'] })
+    },
     onError: () => toast.error('Failed to update'),
   })
 
