@@ -225,25 +225,35 @@ export default function Billing() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {products.map(product => (
               product.variants && product.variants.length > 0 ? (
-                product.variants.map(variant => (
-                  <button
-                    key={`${product.id}-${variant.id}`}
-                    onClick={() => handleAddProduct(product, variant)}
-                    className="bg-white border border-gray-200 rounded-xl p-3 text-left hover:border-brand-400 hover:shadow-sm transition-all"
-                  >
-                    <div className="aspect-square bg-gray-50 rounded-lg mb-2 flex items-center justify-center relative">
+                <div key={product.id} className="bg-white border border-gray-200 rounded-xl p-3">
+                  <div className="aspect-square bg-gray-50 rounded-lg mb-2 flex items-center justify-center overflow-hidden">
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                    ) : (
                       <span className="text-2xl">{product.is_liquor ? '🍺' : '🍽️'}</span>
-                      {isOOS(product.id, variant.id) && (
-                        <span className="absolute inset-0 flex items-center justify-center bg-gray-800/70 rounded-lg text-white text-xs font-bold tracking-wide">
-                          OUT OF STOCK
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs font-semibold text-gray-900 truncate">{product.name}</p>
-                    <p className="text-xs text-gray-400 truncate">{variant.variant_name}</p>
-                    <p className="text-sm font-bold text-brand-600 mt-1">{formatCurrency(variant.selling_price)}</p>
-                  </button>
-                ))
+                    )}
+                  </div>
+                  <p className="text-xs font-semibold text-gray-900 truncate">{product.name}</p>
+                  {product.brand && <p className="text-xs text-gray-400 truncate">{product.brand}</p>}
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {product.variants.map(variant => {
+                      const oos = isOOS(product.id, variant.id)
+                      return (
+                        <button
+                          key={variant.id}
+                          onClick={() => !oos && handleAddProduct(product, variant)}
+                          className={`text-xs px-2 py-1 rounded-lg border transition-colors ${
+                            oos
+                              ? 'border-gray-200 text-gray-300 cursor-not-allowed line-through'
+                              : 'border-brand-300 text-brand-700 bg-brand-50 hover:bg-brand-100'
+                          }`}
+                        >
+                          {variant.variant_name} · {formatCurrency(variant.selling_price)}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               ) : (
                 <ProductCard key={product.id} product={product} onAdd={p => handleAddProduct(p)} isOOS={isOOS(product.id, null)} />
               )

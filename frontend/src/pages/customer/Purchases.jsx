@@ -94,14 +94,23 @@ function PurchaseModal({ outlets, suppliers, products, onClose, onSave }) {
   const [saving, setSaving] = useState(false)
   const u = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const addItem = () => u('items', [...form.items, { product_id: '', quantity: 1, unit_cost: '' }])
+  const addItem = () => u('items', [...form.items, { product_id: '', variant_id: null, quantity: 1, unit_cost: '' }])
   const removeItem = (i) => u('items', form.items.filter((_, j) => j !== i))
   const updateItem = (i, key, val) => {
     const items = [...form.items]
     items[i] = { ...items[i], [key]: val }
     if (key === 'product_id') {
+      items[i].variant_id = null
       const prod = products.find(p => p.id === parseInt(val))
-      if (prod) items[i].unit_cost = prod.purchase_price || ''
+      if (prod) {
+        const hasVariants = prod.variants && prod.variants.length > 0
+        items[i].unit_cost = hasVariants ? '' : (prod.purchase_price || '')
+      }
+    }
+    if (key === 'variant_id') {
+      const prod = products.find(p => p.id === parseInt(items[i].product_id))
+      const variant = prod?.variants?.find(v => v.id === parseInt(val))
+      if (variant) items[i].unit_cost = variant.purchase_price || ''
     }
     u('items', items)
   }
@@ -183,12 +192,28 @@ function PurchaseModal({ outlets, suppliers, products, onClose, onSave }) {
                 Click "Add Item" to add products
               </p>
             )}
-            {form.items.map((item, i) => (
-              <div key={i} className="flex gap-2 mb-2 items-start">
-                <select className="input flex-1" value={item.product_id} onChange={e => updateItem(i, 'product_id', e.target.value)} required>
+            {form.items.map((item, i) => {
+              const selectedProduct = products.find(p => p.id === parseInt(item.product_id))
+              const hasVariants = selectedProduct?.variants?.length > 0
+              return (
+              <div key={i} className="flex flex-wrap gap-2 mb-2 items-start">
+                <select className="input flex-1 min-w-[160px]" value={item.product_id} onChange={e => updateItem(i, 'product_id', e.target.value)} required>
                   <option value="">Select product</option>
                   {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
+                {hasVariants && (
+                  <select
+                    className="input w-36"
+                    value={item.variant_id || ''}
+                    onChange={e => updateItem(i, 'variant_id', e.target.value)}
+                    required
+                  >
+                    <option value="">Select size</option>
+                    {selectedProduct.variants.map(v => (
+                      <option key={v.id} value={v.id}>{v.variant_name}</option>
+                    ))}
+                  </select>
+                )}
                 <input type="number" className="input w-20" placeholder="Qty" value={item.quantity}
                   onChange={e => updateItem(i, 'quantity', e.target.value)} min="1" step="1" required />
                 <input type="number" className="input w-28" placeholder="Cost ₹" value={item.unit_cost}
@@ -200,7 +225,8 @@ function PurchaseModal({ outlets, suppliers, products, onClose, onSave }) {
                   <Trash2 size={15} />
                 </button>
               </div>
-            ))}
+              )
+            })
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -531,7 +557,7 @@ export default function Purchases() {
   const [detailId, setDetailId] = useState(null)
 
   const { data: suppliers = [] } = useQuery({ queryKey: ['suppliers'], queryFn: () => purchasesAPI.listSuppliers().then(r => r.data) })
-  const { data: products = [] } = useQuery({ queryKey: ['all-products'], queryFn: () => productsAPI.list({ per_page: 200 }).then(r => r.data.products) })
+  const { data: products = [] } = useQuery({ queryKey: ['all-products'], queryFn: () => productsAPI.list({ per_page: 200, include_variants: true }).then(r => r.data.products) })
   const { data: purchaseData, isLoading } = useQuery({
     queryKey: ['purchases'],
     queryFn: () => purchasesAPI.list().then(r => r.data),
