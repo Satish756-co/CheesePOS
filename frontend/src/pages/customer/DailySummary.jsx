@@ -350,17 +350,29 @@ export default function DailySummary() {
               ) : (
                 <div className="space-y-2">
                   {(sp.purchases || []).map(p => (
-                    <div key={p.purchase_number} className="flex items-start justify-between border border-yellow-100 rounded-xl p-3 bg-yellow-50">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-800">{p.supplier_name || 'Unknown Supplier'}</p>
-                        <p className="text-xs text-gray-400 font-mono">{p.purchase_number}
-                          {p.invoice_number ? ` · Inv: ${p.invoice_number}` : ''}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          Ordered: {p.invoice_date || '—'} · {p.items_count} item{p.items_count !== 1 ? 's' : ''}
-                        </p>
+                    <div key={p.purchase_number} className="border border-yellow-100 rounded-xl overflow-hidden bg-yellow-50">
+                      <div className="flex items-start justify-between p-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">{p.supplier_name || 'Unknown Supplier'}</p>
+                          <p className="text-xs text-gray-400 font-mono">{p.purchase_number}
+                            {p.invoice_number ? ` · Inv: ${p.invoice_number}` : ''}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            Ordered: {p.invoice_date || '—'} · {p.items_count} item{p.items_count !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <span className="font-bold text-yellow-700 text-sm flex-shrink-0 ml-3">{formatCurrency(p.total_amount)}</span>
                       </div>
-                      <span className="font-bold text-yellow-700 text-sm">{formatCurrency(p.total_amount)}</span>
+                      {(p.items || []).length > 0 && (
+                        <div className="border-t border-yellow-100 px-3 py-2 space-y-1">
+                          {p.items.map((item, i) => (
+                            <div key={i} className="flex justify-between text-xs text-gray-600">
+                              <span className="truncate flex-1">{item.product_name}</span>
+                              <span className="flex-shrink-0 ml-3 text-gray-500">{item.quantity} {item.unit}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                   <div className="border-t border-gray-100 pt-2 flex justify-between text-sm">
