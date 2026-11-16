@@ -68,6 +68,7 @@ export const useAuthStore = create(
         const user = get().user
         if (!user) return false
         if (user.is_super_admin) return true
+        if (user.role === 'owner') return true
 
         const perms = get().effectivePermissions
         const pages = perms?.pages ?? FALLBACK_ROLE_PAGES[user.role] ?? []

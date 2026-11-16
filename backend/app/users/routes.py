@@ -213,6 +213,12 @@ def reset_role_config(role):
     if caller_role not in ('owner', 'admin', 'super_admin'):
         return jsonify({'error': 'Only owner or admin can reset role permissions'}), 403
 
+    if role in ('owner', 'super_admin'):
+        return jsonify({'error': 'Owner and super-admin permissions cannot be changed'}), 403
+
+    if role not in CONFIGURABLE_ROLES:
+        return jsonify({'error': f'Role {role!r} is not configurable'}), 400
+
     TenantRoleConfig.query.filter_by(tenant_id=tenant_id, role=role).delete()
     db.session.commit()
     return jsonify(ROLE_DEFAULT_CONFIGS.get(role, {}))

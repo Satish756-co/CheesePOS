@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import {
   Shield, LayoutDashboard, Receipt, Table2, ShoppingCart, ChefHat,
   Package, Warehouse, Truck, TrendingDown, BarChart2, Users,
-  Store, ClipboardList, RotateCcw, Save, CheckCircle2, XCircle, Info
+  Store, ClipboardList, RotateCcw, Save, CheckCircle2, XCircle, Info, Lock
 } from 'lucide-react'
 
 // ─── Permission definitions ───────────────────────────────────────────────────
@@ -109,13 +109,14 @@ const DATA_SCOPES = [
 ]
 
 const CONFIGURABLE_ROLES = [
-  { key: 'waiter',            label: 'Waiter' },
-  { key: 'cashier',           label: 'Cashier' },
-  { key: 'kitchen',           label: 'Kitchen Staff' },
+  { key: 'owner',             label: 'Owner',           locked: true },
+  { key: 'admin',             label: 'Admin' },
   { key: 'manager',           label: 'Manager' },
+  { key: 'cashier',           label: 'Cashier' },
+  { key: 'waiter',            label: 'Waiter' },
+  { key: 'kitchen',           label: 'Kitchen Staff' },
   { key: 'inventory_manager', label: 'Inventory Manager' },
   { key: 'accountant',        label: 'Accountant' },
-  { key: 'admin',             label: 'Admin' },
 ]
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -155,9 +156,12 @@ function SectionCard({ title, children, badge }) {
 export default function RolePermissions() {
   const queryClient = useQueryClient()
   const { refreshPermissions, user } = useAuthStore()
-  const [activeRole, setActiveRole] = useState('waiter')
+  const [activeRole, setActiveRole] = useState('owner')
   const [draft, setDraft] = useState(null)
   const [dirty, setDirty] = useState(false)
+
+  const activeRoleMeta = CONFIGURABLE_ROLES.find(r => r.key === activeRole)
+  const isLocked = !!activeRoleMeta?.locked
 
   const { data: allConfigs, isLoading } = useQuery({
     queryKey: ['role-configs'],
@@ -166,7 +170,10 @@ export default function RolePermissions() {
 
   // When role or server data changes, reset draft to server config
   useEffect(() => {
-    if (allConfigs?.[activeRole]) {
+    if (activeRole === 'owner') {
+      setDraft({ pages: ['*'], actions: ['*'], approvals: [], data_scope: 'all' })
+      setDirty(false)
+    } else if (allConfigs?.[activeRole]) {
       setDraft({ ...allConfigs[activeRole] })
       setDirty(false)
     }
@@ -238,16 +245,16 @@ export default function RolePermissions() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => resetMutation.mutate()}
-            disabled={resetMutation.isPending}
-            className="btn-secondary flex items-center gap-1.5 text-sm"
+            disabled={isLocked || resetMutation.isPending}
+            className="btn-secondary flex items-center gap-1.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <RotateCcw size={14} /> Reset defaults
           </button>
           <button
             onClick={() => saveMutation.mutate(draft)}
-            disabled={!dirty || saveMutation.isPending}
+            disabled={isLocked || !dirty || saveMutation.isPending}
             className={`btn-primary flex items-center gap-1.5 text-sm
-              ${!dirty ? 'opacity-50 cursor-not-allowed' : ''}`}
+              ${(isLocked || !dirty) ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <Save size={14} /> {saveMutation.isPending ? 'Saving…' : 'Save changes'}
           </button>
@@ -265,15 +272,23 @@ export default function RolePermissions() {
               }
               setActiveRole(r.key)
             }}
-            className={`flex-1 min-w-fit px-4 py-2 rounded-lg text-sm font-medium transition-colors
+            className={`flex-1 min-w-fit px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5
               ${activeRole === r.key
                 ? 'bg-white text-brand-600 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'}`}
           >
+            {r.locked && <Lock size={11} className="opacity-60" />}
             {r.label}
           </button>
         ))}
       </div>
+
+      {isLocked && (
+        <div className="mb-4 flex items-center gap-2 text-sm text-brand-700 bg-brand-50 border border-brand-200 rounded-lg px-4 py-3">
+          <Lock size={14} className="flex-shrink-0" />
+          <span><strong>Owner</strong> always has full access to all pages and actions. These permissions are permanent and cannot be changed by anyone.</span>
+        </div>
+      )}
 
       {dirty && (
         <div className="mb-4 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
@@ -300,7 +315,7 @@ export default function RolePermissions() {
                     className={`flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors
                       ${on ? 'border-brand-200 bg-brand-50' : 'border-gray-100 hover:border-gray-200'}`}
                   >
-                    <Toggle checked={on} onChange={() => togglePage(page.key)} />
+                    <Toggle checked={on} onChange={() => togglePage(page.key)} disabled={isLocked} />
                     <Icon size={14} className={on ? 'text-brand-500' : 'text-gray-400'} />
                     <span className={`text-xs font-medium ${on ? 'text-brand-700' : 'text-gray-500'}`}>
                       {page.label}
@@ -355,7 +370,7 @@ export default function RolePermissions() {
                     className={`flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors
                       ${on ? 'border-orange-200 bg-orange-50' : 'border-gray-100 hover:border-gray-200'}`}
                   >
-                    <Toggle checked={on} onChange={() => toggleApproval(opt.key)} />
+                    <Toggle checked={on} onChange={() => toggleApproval(opt.key)} disabled={isLocked} />
                     <span className={`text-xs ${on ? 'text-orange-700 font-medium' : 'text-gray-600'}`}>
                       {opt.label}
                     </span>
@@ -388,7 +403,7 @@ export default function RolePermissions() {
                             className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors
                               ${on ? 'bg-green-50' : 'hover:bg-gray-50'}`}
                           >
-                            <Toggle checked={on} onChange={() => toggleAction(action.key)} />
+                            <Toggle checked={on} onChange={() => toggleAction(action.key)} disabled={isLocked} />
                             <span className={`text-xs flex-1 ${on ? 'text-gray-800' : 'text-gray-400'}`}>
                               {action.label}
                             </span>
