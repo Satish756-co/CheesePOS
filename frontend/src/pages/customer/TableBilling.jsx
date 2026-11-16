@@ -8,7 +8,7 @@ import BillReceipt from '@/components/BillReceipt'
 import toast from 'react-hot-toast'
 import {
   Search, Plus, Minus, Trash2, Receipt, X, Users,
-  ShoppingBag, ClipboardList, CheckCircle,
+  ShoppingBag, ClipboardList, CheckCircle, ChevronLeft,
 } from 'lucide-react'
 
 const PAYMENT_MODES = ['cash', 'upi', 'card', 'split']
@@ -90,6 +90,7 @@ export default function TableBilling() {
   const [saving, setSaving] = useState(false)
   const [lastInvoice, setLastInvoice] = useState(null)
   const [showBillPanel, setShowBillPanel] = useState(false)
+  const [mobileStep, setMobileStep] = useState('table') // 'table' | 'products' | 'cart'
 
   useEffect(() => {
     if (defaultOutletId && !selectedOutletId) setSelectedOutletId(defaultOutletId)
@@ -132,6 +133,7 @@ export default function TableBilling() {
       setActiveOrder(null)
       setCartItems([])
       setShowBillPanel(false)
+      setMobileStep('table')
       return
     }
 
@@ -139,6 +141,7 @@ export default function TableBilling() {
     setCartItems([])
     setShowBillPanel(false)
     setActiveOrder(null)
+    setMobileStep('products')
 
     // Check for existing active order on this table
     try {
@@ -369,6 +372,7 @@ export default function TableBilling() {
       setCartItems([])
       setSelectedTable(null)
       setShowBillPanel(false)
+      setMobileStep('table')
       qc.invalidateQueries({ queryKey: ['tables', selectedOutletId] })
       qc.invalidateQueries({ queryKey: ['orders'] })
       qc.invalidateQueries({ queryKey: ['stock-quick'] })
@@ -384,9 +388,62 @@ export default function TableBilling() {
   const selectedOutlet = outlets.find(o => o.id === selectedOutletId)
 
   return (
-    <div className="flex flex-col lg:flex-row h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
+
+      {/* ── Mobile step header (hidden on lg+) ── */}
+      <div className="lg:hidden flex-shrink-0 bg-white border-b border-gray-200 px-4 pt-3 pb-2">
+        <div className="flex items-center gap-3">
+          {mobileStep !== 'table' && (
+            <button
+              onClick={() => setMobileStep(mobileStep === 'cart' ? 'products' : 'table')}
+              className="p-1 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+            >
+              <ChevronLeft size={22} />
+            </button>
+          )}
+          <div className="flex-1 min-w-0">
+            {mobileStep === 'table' && <p className="font-bold text-gray-900">Select a Table</p>}
+            {mobileStep === 'products' && (
+              <>
+                <p className="font-bold text-gray-900 truncate">
+                  Table {selectedTable?.table_number}
+                  {activeOrder && <span className="text-xs font-normal text-orange-600 ml-2">{activeOrder.order_number}</span>}
+                </p>
+                <p className="text-xs text-gray-400">{allOrderItems.length} item{allOrderItems.length !== 1 ? 's' : ''} added</p>
+              </>
+            )}
+            {mobileStep === 'cart' && (
+              <p className="font-bold text-gray-900">Table {selectedTable?.table_number} — Bill</p>
+            )}
+          </div>
+          {mobileStep === 'products' && (
+            <button
+              onClick={() => setMobileStep('cart')}
+              disabled={allOrderItems.length === 0}
+              className="btn-primary text-sm py-1.5 px-3 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+            >
+              <Receipt size={14} /> View Bill ({allOrderItems.length})
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 mt-2">
+          {['table', 'products', 'cart'].map(step => (
+            <div
+              key={step}
+              className={`h-1 rounded-full transition-all duration-300 ${mobileStep === step ? 'w-6 bg-brand-500' : 'w-2 bg-gray-200'}`}
+            />
+          ))}
+          <span className="text-[11px] text-gray-400 ml-1">
+            {mobileStep === 'table' ? '1 / 3 · Choose table' : mobileStep === 'products' ? '2 / 3 · Add items' : '3 / 3 · Generate bill'}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Three-panel layout ── */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+
       {/* LEFT: Table selector */}
-      <div className="lg:w-64 flex-shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col h-48 lg:h-full overflow-hidden">
+      <div className={`lg:w-64 lg:flex-shrink-0 bg-white lg:border-r border-gray-200 flex-col overflow-hidden ${mobileStep === 'table' ? 'flex flex-1' : 'hidden lg:flex'}`}>
         <div className="p-4 border-b border-gray-200">
           <h2 className="font-bold text-gray-800 text-sm mb-3">Tables</h2>
           {outlets.length > 1 && (
@@ -418,9 +475,9 @@ export default function TableBilling() {
       </div>
 
       {/* MIDDLE: Product picker */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
-        {/* Context bar */}
-        <div className="bg-white border-b border-gray-200 p-3 flex items-center gap-3 min-h-[52px]">
+      <div className={`flex-col overflow-hidden bg-gray-50 flex-1 ${mobileStep === 'products' ? 'flex' : 'hidden lg:flex'}`}>
+        {/* Context bar — desktop only */}
+        <div className="hidden lg:flex bg-white border-b border-gray-200 p-3 items-center gap-3 min-h-[52px]">
           {selectedTable ? (
             <div className="flex items-center gap-3 w-full">
               <div className="bg-brand-100 text-brand-700 font-bold rounded-lg px-3 py-1 text-sm">
@@ -536,10 +593,27 @@ export default function TableBilling() {
             <div className="text-center py-8 text-gray-400 text-sm">No products found</div>
           )}
         </div>
+
+        {/* Mobile: sticky place-order bar — shown when cart has pending items */}
+        {cartItems.length > 0 && (
+          <div className="lg:hidden flex-shrink-0 bg-white border-t border-gray-200 p-3">
+            <button
+              onClick={handlePlaceOrder}
+              disabled={saving}
+              className="w-full btn-primary py-3 flex items-center justify-center gap-2"
+            >
+              <CheckCircle size={15} />
+              {saving ? 'Placing...' : activeOrder
+                ? `Add ${cartItems.length} item${cartItems.length > 1 ? 's' : ''} to Order`
+                : `Place Order · ${formatCurrency(cartSubtotal)}`
+              }
+            </button>
+          </div>
+        )}
       </div>
 
       {/* RIGHT: Cart (new items) + active order */}
-      <div className="lg:w-80 flex-shrink-0 bg-white border-t lg:border-t-0 lg:border-l border-gray-200 flex flex-col h-64 lg:h-full overflow-hidden">
+      <div className={`lg:w-80 lg:flex-shrink-0 bg-white lg:border-l border-gray-200 flex-col overflow-hidden ${mobileStep === 'cart' ? 'flex flex-1' : 'hidden lg:flex'}`}>
 
         {/* Active order items — editable */}
         {activeOrder && activeOrder.items && activeOrder.items.length > 0 && (
@@ -684,7 +758,26 @@ export default function TableBilling() {
             </div>
           )}
         </div>
+
+        {/* Mobile: Generate Bill — shown on cart step */}
+        {(activeOrder || cartItems.length > 0) && (
+          <div className="lg:hidden flex-shrink-0 p-3 border-t border-gray-200 bg-white">
+            <div className="flex justify-between text-sm text-gray-500 mb-2">
+              <span>Total</span>
+              <span className="font-bold text-gray-900">{formatCurrency(billTotal)}</span>
+            </div>
+            <button
+              onClick={() => setShowBillPanel(true)}
+              className="w-full btn-primary py-3 flex items-center justify-center gap-2"
+            >
+              <Receipt size={15} />
+              Generate Bill
+            </button>
+          </div>
+        )}
       </div>
+
+      </div>{/* end three-panel layout */}
 
       {/* BILL PANEL — slide-up overlay */}
       {showBillPanel && (
