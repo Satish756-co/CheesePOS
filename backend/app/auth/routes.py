@@ -287,12 +287,17 @@ def set_initial_password():
 
     from flask_jwt_extended import create_access_token, create_refresh_token
     access_token = create_access_token(
-        identity=user.id,
-        additional_claims={'ver': user.token_version, 'role': user.role, 'is_super_admin': user.is_super_admin}
+        identity=str(user.id),
+        additional_claims={
+            'tv': user.token_version,
+            'role': user.role,
+            'is_super_admin': user.is_super_admin,
+            'tenant_id': user.tenant_id,
+        }
     )
     refresh_token = create_refresh_token(
-        identity=user.id,
-        additional_claims={'ver': user.token_version}
+        identity=str(user.id),
+        additional_claims={'tv': user.token_version}
     )
     return jsonify({
         'access_token': access_token,

@@ -46,8 +46,12 @@ export const useAuthStore = create(
             tenant: data.tenant ?? get().tenant,
             effectivePermissions: data.effective_permissions ?? get().effectivePermissions,
           })
-        } catch {
-          // silently ignore — stale permissions remain
+        } catch (err) {
+          // On 401/403 the session is invalid — log out immediately
+          if (err?.response?.status === 401 || err?.response?.status === 403) {
+            get().logout()
+          }
+          // For network errors or 5xx, retain stale permissions
         }
       },
 

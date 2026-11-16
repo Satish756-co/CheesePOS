@@ -116,6 +116,10 @@ def create_order():
     if not data or not data.get('outlet_id'):
         return jsonify({'error': 'outlet_id is required'}), 400
 
+    items_data = data.get('items', [])
+    if not items_data:
+        return jsonify({'error': 'items are required'}), 400
+
     count = Order.query.filter_by(tenant_id=tenant_id, outlet_id=data['outlet_id']).count()
     order_number = f"ORD-{datetime.utcnow().strftime('%Y%m%d')}-{str(count + 1).zfill(4)}"
 
@@ -142,7 +146,7 @@ def create_order():
             table.current_order_id = order.id
 
     order_items = []
-    for item_data in data.get('items', []):
+    for item_data in items_data:
         if not item_data.get('product_id'):
             continue
         product = db.session.get(Product, item_data['product_id'])

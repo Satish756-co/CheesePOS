@@ -180,6 +180,9 @@ def update_role_config(role):
     if caller_role not in ('owner', 'admin', 'super_admin'):
         return jsonify({'error': 'Only owner or admin can manage role permissions'}), 403
 
+    if role in ('owner', 'super_admin'):
+        return jsonify({'error': 'Owner and super-admin permissions cannot be changed'}), 403
+
     if role not in CONFIGURABLE_ROLES:
         return jsonify({'error': f'Role {role!r} is not configurable'}), 400
 

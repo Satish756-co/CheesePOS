@@ -332,7 +332,12 @@ def update_settings():
                 if 'max' in meta and val > meta['max']:
                     return jsonify({'error': f'{key} must be at most {meta["max"]}'}), 400
             elif meta['type'] == 'bool':
-                val = bool(val)
+                if isinstance(val, bool):
+                    pass
+                elif isinstance(val, str):
+                    val = val.lower() in ('true', '1', 'yes')
+                else:
+                    val = bool(val)
             PlatformSetting.set(key, val)
             updated[key] = val
     if not updated:

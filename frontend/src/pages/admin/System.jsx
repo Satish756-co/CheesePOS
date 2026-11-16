@@ -96,7 +96,7 @@ function PlatformSettingsCard() {
                     type="number"
                     className="input w-28"
                     value={draft[key] ?? meta.value}
-                    onChange={e => setDraft(d => ({ ...d, [key]: e.target.value }))}
+                    onChange={e => setDraft(d => ({ ...d, [key]: e.target.value === '' ? '' : e.target.valueAsNumber }))}
                     min={meta.min}
                     max={meta.max}
                     required

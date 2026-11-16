@@ -333,7 +333,8 @@ export default function RolePermissions() {
             <div className="space-y-2">
               {DATA_SCOPES.map(scope => (
                 <label key={scope.value}
-                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors
+                  className={`flex items-start gap-3 p-3 rounded-lg border transition-colors
+                    ${isLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
                     ${draft.data_scope === scope.value
                       ? 'border-brand-300 bg-brand-50'
                       : 'border-gray-100 hover:border-gray-200'}`}
@@ -343,7 +344,8 @@ export default function RolePermissions() {
                     name="data_scope"
                     value={scope.value}
                     checked={draft.data_scope === scope.value}
-                    onChange={() => update({ data_scope: scope.value })}
+                    disabled={isLocked}
+                    onChange={() => !isLocked && update({ data_scope: scope.value })}
                     className="mt-0.5 accent-brand-500"
                   />
                   <div>
