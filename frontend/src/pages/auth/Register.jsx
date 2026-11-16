@@ -45,7 +45,7 @@ export default function Register() {
       <p className="text-gray-500 text-sm mb-6">14 days free, no credit card required</p>
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="col-span-2">
             <label className="label">Business Name</label>
             <input className="input" placeholder="The Barrel House" value={form.business_name}

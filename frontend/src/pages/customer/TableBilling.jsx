@@ -382,9 +382,9 @@ export default function TableBilling() {
   const selectedOutlet = outlets.find(o => o.id === selectedOutletId)
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-full overflow-hidden">
       {/* LEFT: Table selector */}
-      <div className="w-64 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+      <div className="lg:w-64 flex-shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col h-48 lg:h-full overflow-hidden">
         <div className="p-4 border-b border-gray-200">
           <h2 className="font-bold text-gray-800 text-sm mb-3">Tables</h2>
           {outlets.length > 1 && (
@@ -537,7 +537,7 @@ export default function TableBilling() {
       </div>
 
       {/* RIGHT: Cart (new items) + active order */}
-      <div className="w-80 flex-shrink-0 bg-white border-l border-gray-200 flex flex-col overflow-hidden">
+      <div className="lg:w-80 flex-shrink-0 bg-white border-t lg:border-t-0 lg:border-l border-gray-200 flex flex-col h-64 lg:h-full overflow-hidden">
 
         {/* Active order items — editable */}
         {activeOrder && activeOrder.items && activeOrder.items.length > 0 && (

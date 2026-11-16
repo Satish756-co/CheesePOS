@@ -33,8 +33,8 @@ export default function AdminRevenue() {
   const payments = data?.payments || []
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Revenue</h1>
           <p className="text-sm text-gray-500">Subscription payment history</p>
@@ -63,7 +63,7 @@ export default function AdminRevenue() {
               <p className="font-medium text-gray-600">No payments in selected period</p>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>

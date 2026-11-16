@@ -154,7 +154,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-white">
       {/* Nav */}
-      <nav className="border-b border-gray-100 px-6 py-4 flex items-center justify-between max-w-7xl mx-auto">
+      <nav className="border-b border-gray-100 px-4 md:px-6 py-4 flex items-center justify-between max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
           <BrandLogo theme="light" size="sm" showSubtitle={false} />
         </div>
@@ -165,12 +165,12 @@ export default function Landing() {
       </nav>
 
       {/* Hero */}
-      <section className="max-w-7xl mx-auto px-6 py-20 text-center">
+      <section className="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-20 text-center">
         <div className="inline-flex items-center gap-2 bg-brand-50 text-brand-700 text-sm px-4 py-1.5 rounded-full mb-6 border border-brand-200">
           <span className="w-2 h-2 bg-brand-500 rounded-full" />
           Built for bars &amp; restaurants across India
         </div>
-        <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
+        <h1 className="text-3xl sm:text-5xl font-bold text-gray-900 mb-6 leading-tight">
           Complete POS & Business<br />
           Management for <span className="text-brand-500">Bars & Restaurants</span>
         </h1>
@@ -178,7 +178,7 @@ export default function Landing() {
           Cloud-based billing, inventory, KOT, and analytics platform built for Indian bars and restaurants.
           Multi-outlet. Multi-user. Subscription-based.
         </p>
-        <div className="flex gap-4 justify-center">
+        <div className="flex flex-wrap gap-4 justify-center">
           <button onClick={() => setShowContact(true)} className="btn-primary text-lg px-8 py-3 flex items-center gap-2">
             Get started <ArrowRight size={18} />
           </button>

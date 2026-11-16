@@ -150,13 +150,13 @@ export default function Expenses() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Expenses</h1>
           <p className="text-sm text-gray-500">{expenses.length} records · Total: {formatCurrency(totalAmount)}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {canExport && (
             <button onClick={() => exportToExcel(expenses, EXPENSES_COLUMNS, 'expenses')} className="btn-secondary flex items-center gap-2">
               <Download size={16} /> Export Excel
@@ -190,7 +190,7 @@ export default function Expenses() {
           <button onClick={() => { setEditExpense(null); setShowModal(true) }} className="btn-primary mt-4">Add First Expense</button>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>

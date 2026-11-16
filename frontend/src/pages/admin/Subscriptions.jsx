@@ -27,8 +27,8 @@ export default function AdminSubscriptions() {
   const totalPages = data?.pages || 1
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Subscriptions</h1>
           <p className="text-sm text-gray-500">{data?.total || 0} subscriptions</p>
@@ -54,7 +54,7 @@ export default function AdminSubscriptions() {
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>

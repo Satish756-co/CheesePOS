@@ -58,9 +58,9 @@ export default function Tables() {
   const currentTableData = tables?.find(t => t.id === selectedTable?.id) || selectedTable
 
   return (
-    <div className="p-6 flex gap-6">
+    <div className="p-4 md:p-6 flex flex-col lg:flex-row gap-6">
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Table Management</h1>
             <p className="text-sm text-gray-500">Manage seating and orders</p>
@@ -112,7 +112,7 @@ export default function Tables() {
       </div>
 
       {selectedTable && (
-        <div className="w-72 flex-shrink-0">
+        <div className="lg:w-72 flex-shrink-0">
           <div className="bg-white border rounded-xl p-5 sticky top-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">Table {currentTableData?.table_number}</h2>

@@ -159,7 +159,7 @@ export default function Billing() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)] overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] overflow-hidden">
       {/* Left: Product Grid */}
       <div className="flex-1 flex flex-col overflow-hidden p-4">
         {/* Outlet error */}
@@ -251,7 +251,7 @@ export default function Billing() {
       </div>
 
       {/* Right: Cart */}
-      <div className="w-80 flex flex-col bg-white border-l border-gray-200">
+      <div className="lg:w-80 flex-shrink-0 flex flex-col bg-white border-t lg:border-t-0 lg:border-l border-gray-200">
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="font-bold text-gray-900 flex items-center gap-2">
             <Receipt size={18} className="text-brand-500" />
@@ -352,7 +352,7 @@ export default function Billing() {
       {/* Payment Modal */}
       {paymentModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-96 p-6">
+          <div className="bg-white rounded-2xl w-full max-w-lg mx-4 p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Collect Payment</h3>
             <div className="bg-gray-50 rounded-xl p-4 mb-4">
               <div className="flex justify-between font-bold text-lg">

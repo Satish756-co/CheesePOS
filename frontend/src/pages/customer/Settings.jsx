@@ -28,7 +28,7 @@ function ProfileSection({ user }) {
           <span className="badge badge-blue mt-1 inline-block">{ROLE_LABELS[user?.role] || user?.role}</span>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4 text-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
         <div>
           <p className="text-gray-500 mb-0.5">Employee Code</p>
           <p className="font-medium font-mono">{user?.employee_code || '—'}</p>
@@ -150,7 +150,7 @@ function BusinessSection({ tenant }) {
       <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
         <Building2 size={18} className="text-brand-500" /> Business Info
       </h2>
-      <div className="grid grid-cols-2 gap-4 text-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
         <div className="col-span-2">
           <p className="text-gray-500 mb-0.5">Business Name</p>
           <p className="font-bold text-base text-gray-900">{tenant.business_name}</p>
@@ -353,7 +353,7 @@ export default function Settings() {
   const tenant = useAuthStore(s => s.tenant)
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
         <p className="text-sm text-gray-500">Manage your account and preferences</p>

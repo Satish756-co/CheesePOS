@@ -182,8 +182,8 @@ export default function Users() {
   const getRoleBadge = (role) => ROLES.find(r => r.value === role)
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Users & Roles</h1>
           <p className="text-sm text-gray-500">{users.length} team member{users.length !== 1 ? 's' : ''}</p>
@@ -202,7 +202,7 @@ export default function Users() {
           <button onClick={() => { setEditUser(null); setShowModal(true) }} className="btn-primary mt-4">Add First User</button>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>

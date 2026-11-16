@@ -287,12 +287,12 @@ export default function AdminTenantDetail() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <button onClick={() => navigate('/admin/tenants')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-4 text-sm">
         <ArrowLeft size={16} /> Back to Tenants
       </button>
 
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{tenant.business_name}</h1>
           <p className="text-gray-500 text-sm">{tenant.email}</p>

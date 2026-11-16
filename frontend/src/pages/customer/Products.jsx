@@ -329,13 +329,13 @@ export default function Products() {
   const products = productData?.products || []
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Products</h1>
           <p className="text-sm text-gray-500">{productData?.total || 0} products</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {canExport && (
             <button onClick={() => exportToExcel(products, PRODUCTS_COLUMNS, 'products')} className="btn-secondary flex items-center gap-2">
               <Download size={16} /> Export Excel
@@ -361,7 +361,7 @@ export default function Products() {
         </select>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>

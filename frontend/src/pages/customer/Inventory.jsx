@@ -28,8 +28,8 @@ export default function Inventory() {
   const lowStockCount = stock.filter(s => s.is_low_stock).length
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
           <p className="text-sm text-gray-500">{stockData?.total || 0} items tracked</p>
@@ -53,7 +53,7 @@ export default function Inventory() {
         </div>
       )}
 
-      <div className="flex gap-3 mb-4">
+      <div className="flex flex-wrap gap-3 mb-4">
         <div className="relative flex-1 max-w-md">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input className="input pl-9" placeholder="Search inventory..." value={search} onChange={e => setSearch(e.target.value)} />
@@ -72,7 +72,7 @@ export default function Inventory() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>

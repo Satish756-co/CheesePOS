@@ -57,8 +57,8 @@ export default function KOT() {
   })
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <ChefHat className="text-brand-500" />

@@ -232,8 +232,8 @@ export default function RolePermissions() {
   const isWildcard = draft.pages?.includes('*')
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Shield size={22} className="text-brand-500" /> Roles & Permissions
@@ -242,7 +242,7 @@ export default function RolePermissions() {
             Configure what each role can see and do. Changes apply to all users with that role.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => resetMutation.mutate()}
             disabled={isLocked || resetMutation.isPending}

@@ -397,7 +397,7 @@ function PurchaseDetailModal({ purchaseId, onClose, onUpdated }) {
             </div>
 
             {/* Summary row */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { label: 'Subtotal', value: formatCurrency(purchase.subtotal), void: purchase.status === 'cancelled' },
                 { label: 'Tax', value: formatCurrency(purchase.tax_amount), void: purchase.status === 'cancelled' },
@@ -638,13 +638,13 @@ export default function Purchases() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Purchases</h1>
           <p className="text-sm text-gray-500">Stock purchase management</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {tab === 'purchases' && canExport && (
             <button onClick={handleExport} className="btn-secondary flex items-center gap-2">
               <Download size={16} /> Export Excel
@@ -684,7 +684,7 @@ export default function Purchases() {
             <button onClick={() => setShowPurchaseModal(true)} className="btn-primary mt-4">Record First Purchase</button>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>

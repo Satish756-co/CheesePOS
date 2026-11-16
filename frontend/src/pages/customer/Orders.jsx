@@ -156,7 +156,7 @@ export default function Orders() {
   const myBilledOrders = orders.filter(o => o.status === 'billed').length
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 md:p-6 space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -176,7 +176,7 @@ export default function Orders() {
 
       {/* Personal summary for non-admin users */}
       {!canSeeAll && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
             <div className="w-10 h-10 bg-brand-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <IndianRupee size={20} className="text-brand-600" />
@@ -249,7 +249,7 @@ export default function Orders() {
           <p className="font-medium text-gray-600">No orders found</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>

@@ -93,7 +93,7 @@ export default function SalesLog() {
   }
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 md:p-6 space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -183,7 +183,7 @@ export default function SalesLog() {
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
