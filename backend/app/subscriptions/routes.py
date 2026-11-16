@@ -17,7 +17,8 @@ def list_public_plans():
 @subscriptions_bp.route('/config', methods=['GET'])
 def get_public_config():
     trial_days = PlatformSetting.get_int('trial_days', 14)
-    return jsonify({'trial_days': trial_days})
+    show_pricing = PlatformSetting.get_bool('show_pricing', False)
+    return jsonify({'trial_days': trial_days, 'show_pricing': show_pricing})
 
 
 @subscriptions_bp.route('/current', methods=['GET'])

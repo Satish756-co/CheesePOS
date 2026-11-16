@@ -82,20 +82,30 @@ function PlatformSettingsCard() {
           {Object.entries(settings || {}).map(([key, meta]) => (
             <div key={key}>
               <label className="label">{meta.label}</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  className="input w-28"
-                  value={draft[key] ?? meta.value}
-                  onChange={e => setDraft(d => ({ ...d, [key]: e.target.value }))}
-                  min={meta.min}
-                  max={meta.max}
-                  required
-                />
-                <span className="text-xs text-gray-400">
-                  {meta.min !== null && meta.max !== null ? `(${meta.min}–${meta.max})` : ''}
-                </span>
-              </div>
+              {meta.type === 'bool' ? (
+                <button
+                  type="button"
+                  onClick={() => setDraft(d => ({ ...d, [key]: !d[key] }))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${draft[key] ? 'bg-brand-500' : 'bg-gray-200'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${draft[key] ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    className="input w-28"
+                    value={draft[key] ?? meta.value}
+                    onChange={e => setDraft(d => ({ ...d, [key]: e.target.value }))}
+                    min={meta.min}
+                    max={meta.max}
+                    required
+                  />
+                  <span className="text-xs text-gray-400">
+                    {meta.min !== null && meta.max !== null ? `(${meta.min}–${meta.max})` : ''}
+                  </span>
+                </div>
+              )}
             </div>
           ))}
           <div className="flex gap-2 pt-1">
@@ -112,7 +122,13 @@ function PlatformSettingsCard() {
           {Object.entries(settings || {}).map(([key, meta]) => (
             <div key={key} className="flex items-center justify-between border-b border-gray-100 pb-3 last:border-0 last:pb-0">
               <span className="text-sm text-gray-500">{meta.label}</span>
-              <span className="font-bold text-gray-900 text-lg">{meta.value}</span>
+              {meta.type === 'bool' ? (
+                <span className={`text-sm font-semibold ${meta.value ? 'text-green-600' : 'text-gray-400'}`}>
+                  {meta.value ? 'Enabled' : 'Disabled'}
+                </span>
+              ) : (
+                <span className="font-bold text-gray-900 text-lg">{meta.value}</span>
+              )}
             </div>
           ))}
           {Object.keys(settings || {}).length === 0 && (

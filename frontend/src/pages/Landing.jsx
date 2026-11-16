@@ -138,10 +138,17 @@ function EnquiryModal({ onClose }) {
 export default function Landing() {
   const [showContact, setShowContact] = useState(false)
 
+  const { data: config = {} } = useQuery({
+    queryKey: ['public-config'],
+    queryFn: () => subscriptionsAPI.getConfig().then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
+
   const { data: plans = [] } = useQuery({
     queryKey: ['public-plans'],
     queryFn: () => subscriptionsAPI.getPlans().then(r => r.data),
     staleTime: 5 * 60 * 1000,
+    enabled: !!config.show_pricing,
   })
 
   return (
@@ -202,7 +209,8 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Plans */}
+      {/* Plans — only shown when admin has enabled pricing visibility */}
+      {config.show_pricing && (
       <section className="py-20 max-w-7xl mx-auto px-6">
         <h2 className="text-3xl font-bold text-gray-900 text-center mb-4">Simple, transparent pricing</h2>
         <p className="text-gray-500 text-center mb-12">Pay per business, not per user. All prices in Indian Rupees + 18% GST.</p>
@@ -251,6 +259,7 @@ export default function Landing() {
           </div>
         )}
       </section>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-gray-200 py-8 text-center text-sm text-gray-400">

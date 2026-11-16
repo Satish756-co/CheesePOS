@@ -288,6 +288,7 @@ def activate_subscription():
 EDITABLE_SETTINGS = {
     'trial_days': {'type': 'int', 'label': 'Trial Period (days)', 'default': 14, 'min': 1, 'max': 90},
     'grace_period_days': {'type': 'int', 'label': 'Grace Period after expiry (days)', 'default': 7, 'min': 0, 'max': 30},
+    'show_pricing': {'type': 'bool', 'label': 'Show Pricing Page', 'default': False},
 }
 
 
@@ -298,9 +299,14 @@ def get_settings():
     result = {}
     for key, meta in EDITABLE_SETTINGS.items():
         raw = PlatformSetting.get(key)
+        if meta['type'] == 'bool':
+            value = (raw.lower() in ('true', '1', 'yes')) if raw is not None else meta['default']
+        else:
+            value = int(raw) if raw is not None else meta['default']
         result[key] = {
-            'value': int(raw) if raw is not None else meta['default'],
+            'value': value,
             'label': meta['label'],
+            'type': meta['type'],
             'min': meta.get('min'),
             'max': meta.get('max'),
         }
@@ -325,6 +331,8 @@ def update_settings():
                     return jsonify({'error': f'{key} must be at least {meta["min"]}'}), 400
                 if 'max' in meta and val > meta['max']:
                     return jsonify({'error': f'{key} must be at most {meta["max"]}'}), 400
+            elif meta['type'] == 'bool':
+                val = bool(val)
             PlatformSetting.set(key, val)
             updated[key] = val
     if not updated:

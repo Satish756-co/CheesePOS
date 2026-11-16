@@ -193,6 +193,13 @@ class PlatformSetting(db.Model):
             return default
 
     @classmethod
+    def get_bool(cls, key, default=False):
+        val = cls.get(key)
+        if val is None:
+            return default
+        return val.lower() in ('true', '1', 'yes')
+
+    @classmethod
     def set(cls, key, value):
         row = cls.query.get(key)
         if row:
