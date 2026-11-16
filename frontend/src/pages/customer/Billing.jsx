@@ -71,7 +71,7 @@ export default function Billing() {
   const products = productData?.products || []
   const totals = getTotals()
 
-  const { data: stockData } = useQuery({
+  const { data: stockData, isLoading: stockLoading } = useQuery({
     queryKey: ['stock-quick', selectedOutletId],
     queryFn: () => inventoryAPI.getCurrentStock({ outlet_id: selectedOutletId, per_page: 500 }).then(r => r.data.stock),
     enabled: !!selectedOutletId,
@@ -82,9 +82,12 @@ export default function Billing() {
     const key = s.variant_id ? `v${s.variant_id}` : `p${s.product_id}`
     stockMap[key] = s.current_stock
   })
+  // Stock data is considered ready only after the query has completed for the selected outlet
+  const stockReady = !!selectedOutletId && !stockLoading && !!stockData
   const isOOS = (productId, variantId) => {
+    if (!stockReady) return false  // still loading — don't show OOS yet
     const s = stockMap[variantId ? `v${variantId}` : `p${productId}`]
-    return s !== undefined && s <= 0
+    return s === undefined || s <= 0  // no stock record OR zero stock = OOS
   }
 
   const handleAddProduct = (product, variant = null) => {
@@ -93,14 +96,14 @@ export default function Billing() {
       return
     }
     const stockKey = variant ? `v${variant.id}` : `p${product.id}`
-    const available = stockMap[stockKey]
-    if (available !== undefined) {
+    if (stockReady) {
+      const available = stockMap[stockKey] ?? 0
       const inCart = cart.reduce((sum, i) => {
         const k = i.variant_id ? `v${i.variant_id}` : `p${i.product_id}`
         return k === stockKey ? sum + i.quantity : sum
       }, 0)
       if (inCart >= available) {
-        toast.error(`Only ${Math.floor(available)} in stock`)
+        toast.error(available > 0 ? `Only ${Math.floor(available)} in stock` : 'No stock available. Add stock in Inventory first.')
         return
       }
     }

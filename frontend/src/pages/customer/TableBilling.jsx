@@ -107,7 +107,7 @@ export default function TableBilling() {
 
   const products = productData?.products || []
 
-  const { data: stockData } = useQuery({
+  const { data: stockData, isLoading: stockLoading } = useQuery({
     queryKey: ['stock-quick', selectedOutletId],
     queryFn: () => inventoryAPI.getCurrentStock({ outlet_id: selectedOutletId, per_page: 500 }).then(r => r.data.stock),
     enabled: !!selectedOutletId,
@@ -118,9 +118,11 @@ export default function TableBilling() {
     const key = s.variant_id ? `v${s.variant_id}` : `p${s.product_id}`
     stockMap[key] = s.current_stock
   })
+  const stockReady = !!selectedOutletId && !stockLoading && !!stockData
   const isOOS = (productId, variantId) => {
+    if (!stockReady) return false
     const s = stockMap[variantId ? `v${variantId}` : `p${productId}`]
-    return s !== undefined && s <= 0
+    return s === undefined || s <= 0
   }
 
   // When a table is selected, look for an existing open order
@@ -159,8 +161,8 @@ export default function TableBilling() {
   const handleAddProduct = (product, variant = null) => {
     if (!selectedTable) { toast.error('Select a table first'); return }
     const stockKey = variant ? `v${variant.id}` : `p${product.id}`
-    const available = stockMap[stockKey]
-    if (available !== undefined) {
+    if (stockReady) {
+      const available = stockMap[stockKey] ?? 0
       const cartKey = `${product.id}_${variant?.id || 'base'}`
       const inCart = cartItems.reduce((s, i) => i.key === cartKey ? s + i.quantity : s, 0)
       const inOrder = (activeOrder?.items || []).reduce((s, i) => {
@@ -168,7 +170,7 @@ export default function TableBilling() {
         return match ? s + Number(i.quantity) : s
       }, 0)
       if (inCart + inOrder >= available) {
-        toast.error(`Only ${Math.floor(available)} in stock`)
+        toast.error(available > 0 ? `Only ${Math.floor(available)} in stock` : 'No stock available. Add stock in Inventory first.')
         return
       }
     }
@@ -577,6 +579,9 @@ export default function TableBilling() {
                             toast.error(`Only ${Math.floor(available)} in stock`)
                             return
                           }
+                        } else if (stockReady) {
+                          toast.error('No stock available. Add stock in Inventory first.')
+                          return
                         }
                         handleUpdateOrderItem(item, Number(item.quantity) + 1)
                       }}
@@ -641,6 +646,9 @@ export default function TableBilling() {
                           toast.error(`Only ${Math.floor(available)} in stock`)
                           return
                         }
+                      } else if (stockReady) {
+                        toast.error('No stock available. Add stock in Inventory first.')
+                        return
                       }
                       updateCartQty(item.key, item.quantity + 1)
                     }} className="w-5 h-5 rounded-full bg-brand-100 hover:bg-brand-200 text-brand-600 flex items-center justify-center">
