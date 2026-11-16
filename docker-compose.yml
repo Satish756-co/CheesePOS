@@ -39,7 +39,7 @@ services:
       - "5000:5000"
     environment:
       - FLASK_APP=run.py
-      - FLASK_ENV=${FLASK_ENV:-development}
+      - FLASK_ENV=${FLASK_ENV:-production}
       - DATABASE_URL=postgresql://barpro_user:${DB_PASSWORD:-barpro_secret}@postgres:5432/barpro_db
       - REDIS_URL=redis://:${REDIS_PASSWORD:-change-redis-password-in-production}@redis:6379/0
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-this-in-production}
@@ -60,7 +60,6 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./backend:/app
       - backend_uploads:/app/uploads
 
   frontend:
@@ -69,14 +68,9 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "3000:3000"
-    environment:
-      - VITE_BACKEND_URL=http://backend:5000
+      - "3000:80"
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
 
   nginx:
     image: nginx:alpine
