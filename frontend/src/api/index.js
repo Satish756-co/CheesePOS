@@ -175,6 +175,9 @@ export const adminAPI = {
   reactivateTenant: (id) => api.post(`/admin/tenants/${id}/reactivate`),
   resetUserPassword: (tenantId, userId) => api.post(`/admin/tenants/${tenantId}/users/${userId}/reset-password`),
   updateFeatureOverrides: (tenantId, overrides) => api.put(`/admin/tenants/${tenantId}/feature-overrides`, overrides),
+  listOnboardingRequests: (params) => api.get('/admin/onboarding-requests', { params }),
+  approveOnboardingRequest: (id, data) => api.post(`/admin/onboarding-requests/${id}/approve`, data),
+  rejectOnboardingRequest: (id, data) => api.post(`/admin/onboarding-requests/${id}/reject`, data),
 }
 
 export const supportAPI = {

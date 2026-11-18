@@ -13,7 +13,7 @@ from app.models import (
     User, UserOutlet, Outlet, Invoice, SupportTicket, PlatformSetting,
     DataResetBatch, Order, OrderItem, KOT, KOTItem, InvoiceItem, BillPayment,
     Purchase, PurchaseItem, InventoryLedger, StockBalance, StockTransfer, StockTransferItem,
-    Expense, AuditLog,
+    Expense, AuditLog, OnboardingRequest,
 )
 from app.auth.decorators import super_admin_required
 
@@ -755,3 +755,160 @@ def reactivate_tenant(tenant_id):
     tenant.status = 'trial'  # restore to trial; admin can activate manually
     db.session.commit()
     return jsonify(tenant.to_dict())
+
+
+# ─── Onboarding Requests ──────────────────────────────────────────────────────
+
+@admin_bp.route('/onboarding-requests', methods=['GET'])
+@jwt_required()
+@super_admin_required
+def list_onboarding_requests():
+    status = request.args.get('status')
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+
+    q = OnboardingRequest.query
+    if status:
+        q = q.filter_by(status=status)
+
+    pagination = q.order_by(OnboardingRequest.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    pending_count = OnboardingRequest.query.filter_by(status='pending').count()
+
+    return jsonify({
+        'requests': [r.to_dict() for r in pagination.items],
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'pending_count': pending_count,
+    })
+
+
+@admin_bp.route('/onboarding-requests/<int:req_id>/approve', methods=['POST'])
+@jwt_required()
+@super_admin_required
+def approve_onboarding_request(req_id):
+    orq = OnboardingRequest.query.get_or_404(req_id)
+    if orq.status != 'pending':
+        return jsonify({'error': f'Request is already {orq.status}'}), 400
+
+    admin_user_id = int(get_jwt_identity())
+    data = request.get_json() or {}
+
+    # Use submitted info or allow admin to override
+    business_name = data.get('business_name', orq.business_name).strip()
+    email = data.get('email', orq.email).lower().strip()
+    owner_name = data.get('owner_name', orq.owner_name or '').strip()
+    phone = data.get('phone', orq.phone).strip()
+    city = data.get('city', '').strip()
+    state = data.get('state', '').strip()
+
+    if User.query.filter_by(email=email).first() or Tenant.query.filter_by(email=email).first():
+        return jsonify({'error': 'Email already registered'}), 400
+
+    # Split owner name into first/last
+    parts = owner_name.split(' ', 1)
+    first_name = parts[0] if parts else owner_name
+    last_name = parts[1] if len(parts) > 1 else ''
+
+    count = Tenant.query.count()
+    tenant_code = f"TEN-{str(count + 1).zfill(6)}"
+    trial_days = PlatformSetting.get_int('trial_days', 14)
+
+    tenant = Tenant(
+        tenant_code=tenant_code,
+        business_name=business_name,
+        owner_name=owner_name,
+        email=email,
+        phone=phone,
+        city=city,
+        state=state,
+        status='trial',
+        trial_ends_at=datetime.utcnow() + timedelta(days=trial_days),
+    )
+    db.session.add(tenant)
+    db.session.flush()
+
+    temp_password = _gen_temp_password()
+    owner = User(
+        tenant_id=tenant.id,
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        phone=phone,
+        role='owner',
+        is_active=True,
+        must_change_password=True,
+    )
+    owner.set_password(temp_password)
+    db.session.add(owner)
+
+    outlet = Outlet(
+        tenant_id=tenant.id,
+        outlet_code=f"{tenant_code}-01",
+        name=business_name,
+        city=city,
+        state=state,
+        is_active=True,
+    )
+    db.session.add(outlet)
+
+    orq.status = 'approved'
+    orq.reviewed_at = datetime.utcnow()
+    orq.reviewed_by = admin_user_id
+    orq.tenant_id = tenant.id
+
+    db.session.commit()
+
+    app = current_app._get_current_object()
+    _send_welcome_email(app, email, business_name, owner_name or email, temp_password)
+
+    return jsonify({
+        'message': 'Approved and tenant account created',
+        'tenant': tenant.to_dict(include_subscription=True),
+    }), 201
+
+
+@admin_bp.route('/onboarding-requests/<int:req_id>/reject', methods=['POST'])
+@jwt_required()
+@super_admin_required
+def reject_onboarding_request(req_id):
+    orq = OnboardingRequest.query.get_or_404(req_id)
+    if orq.status != 'pending':
+        return jsonify({'error': f'Request is already {orq.status}'}), 400
+
+    admin_user_id = int(get_jwt_identity())
+    data = request.get_json() or {}
+    reason = data.get('reason', '').strip()
+
+    orq.status = 'rejected'
+    orq.rejection_reason = reason
+    orq.reviewed_at = datetime.utcnow()
+    orq.reviewed_by = admin_user_id
+
+    db.session.commit()
+
+    # Optionally notify applicant
+    if data.get('notify', True):
+        from app.models.onboarding import BUSINESS_TYPE_LABELS
+        btype_label = BUSINESS_TYPE_LABELS.get(orq.business_type, orq.business_type)
+        msg = Message(
+            subject='Update on your CheesePOS application',
+            recipients=[orq.email],
+            html=f"""
+            <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
+              <h2 style="color:#1e293b">Application Update</h2>
+              <p>Hi {html_mod.escape(orq.owner_name or orq.email)},</p>
+              <p>Thank you for your interest in CheesePOS for <strong>{html_mod.escape(orq.business_name)}</strong>.</p>
+              <p>Unfortunately, we are unable to proceed with your application at this time.</p>
+              {'<p><strong>Reason:</strong> ' + html_mod.escape(reason) + '</p>' if reason else ''}
+              <p>If you have questions, please contact us at <a href="mailto:cheesepossupport@gmail.com">cheesepossupport@gmail.com</a>.</p>
+            </div>
+            """,
+        )
+        app = current_app._get_current_object()
+        thread = threading.Thread(target=_send_async, args=(app, msg))
+        thread.daemon = True
+        thread.start()
+
+    return jsonify({'message': 'Request rejected', 'request': orq.to_dict()})

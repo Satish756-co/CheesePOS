@@ -46,6 +46,7 @@ import AdminPlans from '@/pages/admin/Plans'
 import AdminRevenue from '@/pages/admin/Revenue'
 import AdminSupport from '@/pages/admin/Support'
 import AdminSystem from '@/pages/admin/System'
+import AdminOnboarding from '@/pages/admin/OnboardingRequests'
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, token } = useAuthStore()
@@ -223,6 +224,7 @@ export default function App() {
         <Route path="revenue" element={<AdminRevenue />} />
         <Route path="support" element={<AdminSupport />} />
         <Route path="system" element={<AdminSystem />} />
+        <Route path="onboarding" element={<AdminOnboarding />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

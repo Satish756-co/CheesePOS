@@ -9,6 +9,7 @@ from app.models.inventory import (
     InventoryLedger, StockBalance, StockTransfer, StockTransferItem, Expense
 )
 from app.models.support import SupportTicket, TicketMessage
+from app.models.onboarding import OnboardingRequest, BUSINESS_TYPES, BUSINESS_TYPE_LABELS
 
 __all__ = [
     'TimestampMixin', 'generate_uuid',
@@ -20,4 +21,5 @@ __all__ = [
     'Supplier', 'Purchase', 'PurchaseItem',
     'InventoryLedger', 'StockBalance', 'StockTransfer', 'StockTransferItem', 'Expense',
     'SupportTicket', 'TicketMessage',
+    'OnboardingRequest', 'BUSINESS_TYPES', 'BUSINESS_TYPE_LABELS',
 ]

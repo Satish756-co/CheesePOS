@@ -3,8 +3,25 @@ import { contactAPI } from '@/api'
 import { CheckCircle, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+const BUSINESS_TYPES = [
+  { value: 'bar_restaurant', label: 'Bar & Restaurant' },
+  { value: 'saloon',         label: 'Saloon / Spa' },
+  { value: 'daily_store',    label: 'Daily Store / Kirana' },
+  { value: 'scanning_lab',   label: 'Scanning Center / Lab' },
+  { value: 'pharmacy',       label: 'Pharmacy' },
+  { value: 'retail_shop',    label: 'Retail Shop' },
+  { value: 'hr_operations',  label: 'HR Operations' },
+  { value: 'other',          label: 'Other' },
+]
+
 export default function EnquiryModal({ onClose }) {
-  const [form, setForm] = useState({ business_name: '', email: '', phone: '', description: '' })
+  const [form, setForm] = useState({
+    business_name: '',
+    email: '',
+    phone: '',
+    business_type: 'bar_restaurant',
+    description: '',
+  })
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
 
@@ -25,7 +42,7 @@ export default function EnquiryModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-8 relative">
+      <div className="bg-white rounded-2xl w-full max-w-md p-8 relative max-h-[90vh] overflow-y-auto">
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
           <X size={20} />
         </button>
@@ -47,6 +64,20 @@ export default function EnquiryModal({ onClose }) {
             <p className="text-gray-500 text-sm mb-6">Fill in your details and we'll set up your account.</p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="label">Business Type <span className="text-red-500">*</span></label>
+                <select
+                  className="input"
+                  value={form.business_type}
+                  onChange={e => set('business_type', e.target.value)}
+                  required
+                >
+                  {BUSINESS_TYPES.map(bt => (
+                    <option key={bt.value} value={bt.value}>{bt.label}</option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="label">Business Name <span className="text-red-500">*</span></label>
                 <input
@@ -88,7 +119,7 @@ export default function EnquiryModal({ onClose }) {
                 <textarea
                   className="input resize-none"
                   rows={3}
-                  placeholder="Tell us about your business — number of outlets, type of restaurant, anything else..."
+                  placeholder="Tell us about your business — number of outlets, staff size, anything else..."
                   value={form.description}
                   onChange={e => set('description', e.target.value)}
                 />
