@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminAPI } from '@/api'
 import { formatCurrency, formatDate } from '@/utils/formatters'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Building2, Users, Store, CreditCard, X, Sliders, AlertTriangle, Clock, RotateCcw, Trash2 } from 'lucide-react'
+import { ArrowLeft, Building2, Users, Store, CreditCard, X, Sliders, AlertTriangle, Clock, RotateCcw, Trash2, KeyRound, Copy } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
 
 function ActivateSubscriptionModal({ tenantId, plans, onClose, onSave }) {
@@ -73,8 +73,34 @@ function ActivateSubscriptionModal({ tenantId, plans, onClose, onSave }) {
   )
 }
 
+function ResetPasswordResultModal({ result, onClose }) {
+  const copy = () => {
+    navigator.clipboard.writeText(result.temp_password)
+    toast.success('Copied to clipboard')
+  }
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900">Password Reset</h3>
+          <button onClick={onClose}><X size={20} /></button>
+        </div>
+        <p className="text-sm text-gray-600 mb-1">Temporary password for <strong>{result.user_name}</strong></p>
+        <p className="text-xs text-gray-400 mb-4">{result.user_email}</p>
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-4">
+          <span className="font-mono text-lg font-bold text-gray-900 flex-1 tracking-wider">{result.temp_password}</span>
+          <button onClick={copy} className="text-gray-400 hover:text-brand-600"><Copy size={16} /></button>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 mb-5">
+          Share this password with the user. They will be forced to change it on next login.
+        </div>
+        <button onClick={onClose} className="btn-primary w-full">Done</button>
+      </div>
+    </div>
+  )
+}
+
 const OPTION_LABELS = {
-  invoices: 'Sales/Invoices', orders: 'Orders & KOTs', purchases: 'Purchases',
   inventory: 'Inventory', expenses: 'Expenses', staff_users: 'Staff Accounts',
 }
 
@@ -243,6 +269,7 @@ export default function AdminTenantDetail() {
   const [showSubModal, setShowSubModal] = useState(false)
   const [editingLimits, setEditingLimits] = useState(false)
   const [limitsForm, setLimitsForm] = useState({})
+  const [resetResult, setResetResult] = useState(null)
 
   const { data: tenant, isLoading } = useQuery({
     queryKey: ['admin-tenant', id],
@@ -266,6 +293,12 @@ export default function AdminTenantDetail() {
       toast.success('Subscription activated')
     },
     onError: (err) => toast.error(err.response?.data?.error || 'Failed'),
+  })
+
+  const resetPassword = useMutation({
+    mutationFn: (userId) => adminAPI.resetUserPassword(parseInt(id), userId),
+    onSuccess: (res) => setResetResult(res.data),
+    onError: (err) => toast.error(err.response?.data?.error || 'Reset failed'),
   })
 
   if (isLoading) return <div className="p-6 text-center text-gray-400">Loading...</div>
@@ -503,6 +536,7 @@ export default function AdminTenantDetail() {
                 <th className="table-header">Role</th>
                 <th className="table-header">Status</th>
                 <th className="table-header">Joined</th>
+                <th className="table-header">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -513,6 +547,16 @@ export default function AdminTenantDetail() {
                   <td className="table-cell"><span className="badge badge-blue capitalize">{u.role}</span></td>
                   <td className="table-cell"><span className={`badge ${u.is_active ? 'badge-green' : 'badge-red'}`}>{u.is_active ? 'Active' : 'Inactive'}</span></td>
                   <td className="table-cell text-sm text-gray-500">{formatDate(u.created_at)}</td>
+                  <td className="table-cell">
+                    <button
+                      onClick={() => { if (window.confirm(`Reset password for ${u.first_name} ${u.last_name}?`)) resetPassword.mutate(u.id) }}
+                      disabled={resetPassword.isPending}
+                      title="Reset password"
+                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 disabled:opacity-50"
+                    >
+                      <KeyRound size={13} /> Reset Password
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -552,6 +596,10 @@ export default function AdminTenantDetail() {
           onClose={() => setShowSubModal(false)}
           onSave={activateSub.mutateAsync}
         />
+      )}
+
+      {resetResult && (
+        <ResetPasswordResultModal result={resetResult} onClose={() => setResetResult(null)} />
       )}
     </div>
   )

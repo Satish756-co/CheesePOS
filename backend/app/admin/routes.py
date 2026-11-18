@@ -688,6 +688,29 @@ def delete_tenant(tenant_id):
     return jsonify(tenant.to_dict())
 
 
+# ─── Admin: reset a user's password ─────────────────────────────────────────
+
+@admin_bp.route('/tenants/<int:tenant_id>/users/<int:user_id>/reset-password', methods=['POST'])
+@jwt_required()
+@super_admin_required
+def admin_reset_user_password(tenant_id, user_id):
+    user = User.query.filter_by(id=user_id, tenant_id=tenant_id).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    temp_password = _gen_temp_password()
+    user.set_password(temp_password)
+    user.must_change_password = True
+    db.session.commit()
+
+    return jsonify({
+        'message': f'Password reset for {user.email}',
+        'temp_password': temp_password,
+        'user_email': user.email,
+        'user_name': user.full_name,
+    })
+
+
 # ─── Reactivate tenant during cooling period ─────────────────────────────────
 
 @admin_bp.route('/tenants/<int:tenant_id>/reactivate', methods=['POST'])

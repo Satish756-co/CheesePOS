@@ -173,6 +173,7 @@ export const adminAPI = {
   createTenant: (data) => api.post('/admin/tenants', data),
   deleteTenant: (id) => api.delete(`/admin/tenants/${id}`),
   reactivateTenant: (id) => api.post(`/admin/tenants/${id}/reactivate`),
+  resetUserPassword: (tenantId, userId) => api.post(`/admin/tenants/${tenantId}/users/${userId}/reset-password`),
 }
 
 export const supportAPI = {
