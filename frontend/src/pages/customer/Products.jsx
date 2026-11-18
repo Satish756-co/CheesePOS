@@ -319,15 +319,15 @@ export default function Products() {
 
   const createProduct = useMutation({
     mutationFn: (data) => productsAPI.create(data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); toast.success('Product added') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); qc.invalidateQueries({ queryKey: ['all-products'] }); toast.success('Product added') },
   })
   const updateProduct = useMutation({
     mutationFn: ({ id, data }) => productsAPI.update(id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); toast.success('Product updated') },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); qc.invalidateQueries({ queryKey: ['all-products'] }); toast.success('Product updated') },
   })
   const toggleProduct = useMutation({
     mutationFn: ({ id, field, value }) => productsAPI.toggle(id, field, value),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); qc.invalidateQueries({ queryKey: ['all-products'] }) },
     onError: () => toast.error('Failed to update'),
   })
 
