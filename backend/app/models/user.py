@@ -238,6 +238,23 @@ class UserOutlet(db.Model, TimestampMixin):
     outlet = db.relationship('Outlet', back_populates='user_assignments')
 
 
+class UserTenantAccess(db.Model):
+    """Links a user (owner) to multiple tenants for multi-business support."""
+    __tablename__ = 'user_tenant_access'
+
+    id        = db.Column(db.Integer, primary_key=True)
+    user_id   = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=False)
+    role      = db.Column(db.String(30), default='owner')
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'tenant_id', name='uq_user_tenant'),)
+
+    user   = db.relationship('User', backref=db.backref('tenant_accesses', lazy='dynamic'))
+    tenant = db.relationship('Tenant', backref=db.backref('user_accesses', lazy='dynamic'))
+
+
 class AuditLog(db.Model):
     __tablename__ = 'audit_logs'
 

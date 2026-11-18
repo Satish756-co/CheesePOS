@@ -15,6 +15,29 @@ const STATUSES = [
   { value: 'pending_deletion', label: 'Pending Deletion' },
 ]
 
+const BUSINESS_TYPES = [
+  { value: '', label: 'All Types' },
+  { value: 'bar_restaurant', label: 'Bar & Restaurant' },
+  { value: 'saloon', label: 'Saloon / Spa' },
+  { value: 'daily_store', label: 'Daily Store' },
+  { value: 'scanning_lab', label: 'Scanning Lab' },
+  { value: 'pharmacy', label: 'Pharmacy' },
+  { value: 'retail_shop', label: 'Retail Shop' },
+  { value: 'hr_operations', label: 'HR Operations' },
+  { value: 'other', label: 'Other' },
+]
+
+const BIZ_TYPE_BADGE = {
+  bar_restaurant: 'bg-orange-50 text-orange-700',
+  saloon:         'bg-pink-50 text-pink-700',
+  daily_store:    'bg-green-50 text-green-700',
+  scanning_lab:   'bg-blue-50 text-blue-700',
+  pharmacy:       'bg-teal-50 text-teal-700',
+  retail_shop:    'bg-purple-50 text-purple-700',
+  hr_operations:  'bg-gray-100 text-gray-600',
+  other:          'bg-gray-100 text-gray-500',
+}
+
 function daysRemaining(expiresAt) {
   if (!expiresAt) return null
   const ms = new Date(expiresAt) - new Date()
@@ -136,6 +159,7 @@ function DeleteConfirmModal({ tenant, onClose, onSuccess }) {
 export default function AdminTenants() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
+  const [businessType, setBusinessType] = useState('')
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -143,8 +167,8 @@ export default function AdminTenants() {
   const qc = useQueryClient()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-tenants', search, status, page],
-    queryFn: () => adminAPI.listTenants({ search, status, page, per_page: 20 }).then(r => r.data),
+    queryKey: ['admin-tenants', search, status, businessType, page],
+    queryFn: () => adminAPI.listTenants({ search, status, business_type: businessType, page, per_page: 20 }).then(r => r.data),
   })
 
   const updateTenant = useMutation({
@@ -189,6 +213,16 @@ export default function AdminTenants() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input className="input pl-9" placeholder="Search by name, email, city..." value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
         </div>
+        <select
+          value={businessType}
+          onChange={e => { setBusinessType(e.target.value); setPage(1) }}
+          className="input text-sm py-1.5 pr-8"
+          style={{ minWidth: '140px' }}
+        >
+          {BUSINESS_TYPES.map(bt => (
+            <option key={bt.value} value={bt.value}>{bt.label}</option>
+          ))}
+        </select>
         <div className="flex bg-white rounded-lg border border-gray-200 p-0.5 flex-wrap">
           {STATUSES.map(s => (
             <button key={s.value} onClick={() => { setStatus(s.value); setPage(1) }}
@@ -206,6 +240,7 @@ export default function AdminTenants() {
             <tr>
               <th className="table-header">Business</th>
               <th className="table-header">Contact</th>
+              <th className="table-header">Business Type</th>
               <th className="table-header">Location</th>
               <th className="table-header">Plan</th>
               <th className="table-header">Status</th>
@@ -215,10 +250,10 @@ export default function AdminTenants() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {isLoading && (
-              <tr><td colSpan={7} className="table-cell text-center text-gray-400 py-8">Loading…</td></tr>
+              <tr><td colSpan={8} className="table-cell text-center text-gray-400 py-8">Loading…</td></tr>
             )}
             {!isLoading && (data?.tenants || []).length === 0 && (
-              <tr><td colSpan={7} className="table-cell text-center text-gray-400 py-8">No customers found</td></tr>
+              <tr><td colSpan={8} className="table-cell text-center text-gray-400 py-8">No customers found</td></tr>
             )}
             {(data?.tenants || []).map(t => {
               const isPendingDeletion = t.deletion_status === 'pending_deletion'
@@ -235,6 +270,15 @@ export default function AdminTenants() {
                   <td className="table-cell">
                     <p className="text-sm">{t.owner_name}</p>
                     <p className="text-xs text-gray-400">{t.email}</p>
+                  </td>
+                  <td className="table-cell">
+                    {t.business_type ? (
+                      <span className={`badge text-xs ${BIZ_TYPE_BADGE[t.business_type] || 'bg-gray-100 text-gray-500'}`}>
+                        {BUSINESS_TYPES.find(bt => bt.value === t.business_type)?.label || t.business_type}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
                   </td>
                   <td className="table-cell text-gray-600">{[t.city, t.state].filter(Boolean).join(', ') || '—'}</td>
                   <td className="table-cell text-gray-600">

@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import api from '@/api/client'
-
 // Fallback hardcoded map used when effectivePermissions hasn't loaded yet
 const FALLBACK_ROLE_PAGES = {
   owner: ['*'],
@@ -25,9 +24,10 @@ export const useAuthStore = create(
       refreshToken: null,
       effectivePermissions: null,
       sessionExpiry: null,
+      businesses: [],
 
-      setAuth: (user, tenant, token, refreshToken, effectivePermissions = null) =>
-        set({ user, tenant, token, refreshToken, effectivePermissions, sessionExpiry: Date.now() + 4 * 60 * 60 * 1000 }),
+      setAuth: (user, tenant, token, refreshToken, effectivePermissions = null, businesses = []) =>
+        set({ user, tenant, token, refreshToken, effectivePermissions, sessionExpiry: Date.now() + 4 * 60 * 60 * 1000, businesses }),
 
       setToken: (token) => set({ token }),
 
@@ -45,6 +45,7 @@ export const useAuthStore = create(
             user: data.user ?? get().user,
             tenant: data.tenant ?? get().tenant,
             effectivePermissions: data.effective_permissions ?? get().effectivePermissions,
+            businesses: data.businesses ?? get().businesses,
           })
         } catch (err) {
           // On 401/403 the session is invalid — log out immediately
@@ -55,7 +56,7 @@ export const useAuthStore = create(
         }
       },
 
-      logout: () => set({ user: null, tenant: null, token: null, refreshToken: null, effectivePermissions: null, sessionExpiry: null }),
+      logout: () => set({ user: null, tenant: null, token: null, refreshToken: null, effectivePermissions: null, sessionExpiry: null, businesses: [] }),
 
       isSessionExpired: () => {
         const expiry = get().sessionExpiry
@@ -162,8 +163,13 @@ export const useAuthStore = create(
         return '/app/settings'
       },
 
-      isSubscriptionActive: () => {
-        const tenant = get().tenant
+      switchBusiness: async (tenantId) => {
+        const res = await api.post('/auth/switch-business', { tenant_id: tenantId })
+        const d = res.data
+        get().setAuth(d.user, d.tenant, d.access_token, d.refresh_token, d.effective_permissions, d.businesses ?? [])
+      },
+
+      isSubscriptionActive: () => {        const tenant = get().tenant
         if (!tenant) return false
         if (tenant.status === 'trial') {
           if (!tenant.trial_ends_at) return true
@@ -181,6 +187,7 @@ export const useAuthStore = create(
         refreshToken: state.refreshToken,
         effectivePermissions: state.effectivePermissions,
         sessionExpiry: state.sessionExpiry,
+        businesses: state.businesses,
       }),
     }
   )

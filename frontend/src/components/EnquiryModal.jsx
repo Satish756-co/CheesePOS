@@ -17,6 +17,7 @@ const BUSINESS_TYPES = [
 export default function EnquiryModal({ onClose }) {
   const [form, setForm] = useState({
     business_name: '',
+    owner_name: '',
     email: '',
     phone: '',
     business_type: 'bar_restaurant',
@@ -87,6 +88,17 @@ export default function EnquiryModal({ onClose }) {
                   value={form.business_name}
                   onChange={e => set('business_name', e.target.value)}
                   required
+                />
+              </div>
+
+              <div>
+                <label className="label">Owner Name <span className="text-gray-400 font-normal">(optional)</span></label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Your full name"
+                  value={form.owner_name}
+                  onChange={e => set('owner_name', e.target.value)}
                 />
               </div>
 

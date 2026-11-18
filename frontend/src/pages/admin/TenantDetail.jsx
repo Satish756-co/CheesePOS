@@ -6,6 +6,17 @@ import toast from 'react-hot-toast'
 import { ArrowLeft, Building2, Users, Store, CreditCard, X, Sliders, AlertTriangle, Clock, RotateCcw, Trash2, KeyRound, Copy, ToggleLeft, ToggleRight } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
 
+const BUSINESS_TYPE_LABELS = {
+  bar_restaurant: 'Bar & Restaurant',
+  saloon:         'Saloon / Spa',
+  daily_store:    'Daily Store',
+  scanning_lab:   'Scanning Lab',
+  pharmacy:       'Pharmacy',
+  retail_shop:    'Retail Shop',
+  hr_operations:  'HR Operations',
+  other:          'Other',
+}
+
 function ActivateSubscriptionModal({ tenantId, plans, onClose, onSave }) {
   const [form, setForm] = useState({ plan_id: plans[0]?.id || '', billing_cycle: 'monthly' })
   const [saving, setSaving] = useState(false)
@@ -454,6 +465,7 @@ export default function AdminTenantDetail() {
             <div className="space-y-3 text-sm">
               {[
                 ['Business Name', tenant.business_name],
+                ['Business Type', tenant.business_type ? (BUSINESS_TYPE_LABELS[tenant.business_type] || tenant.business_type) : null],
                 ['Email', tenant.email],
                 ['Phone', tenant.phone],
                 ['City', tenant.city],

@@ -10,7 +10,7 @@ import html as html_mod
 from app.extensions import db, mail, limiter
 from app.models import (
     Tenant, Plan, TenantSubscription, SubscriptionPayment,
-    User, UserOutlet, Outlet, Invoice, SupportTicket, PlatformSetting,
+    User, UserOutlet, UserTenantAccess, Outlet, Invoice, SupportTicket, PlatformSetting,
     DataResetBatch, Order, OrderItem, KOT, KOTItem, InvoiceItem, BillPayment,
     Purchase, PurchaseItem, InventoryLedger, StockBalance, StockTransfer, StockTransferItem,
     Expense, AuditLog, OnboardingRequest,
@@ -78,6 +78,7 @@ def admin_dashboard():
 def list_tenants():
     status = request.args.get('status')
     search = request.args.get('search', '')
+    business_type = request.args.get('business_type', '')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
 
@@ -104,6 +105,9 @@ def list_tenants():
             Tenant.email.ilike(f'%{search}%'),
             Tenant.city.ilike(f'%{search}%'),
         ))
+
+    if business_type:
+        q = q.filter_by(business_type=business_type)
 
     pagination = q.order_by(Tenant.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     return jsonify({
@@ -520,6 +524,38 @@ def _send_async(app, msg):
             app.logger.error(f'Admin welcome email failed: {e}')
 
 
+def _send_new_business_email(app, email, business_name, owner_name):
+    msg = Message(
+        subject=f'New business added to your CheesePOS account — {business_name}',
+        recipients=[email],
+        html=f"""
+        <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
+          <div style="background:#1e293b;color:#fff;padding:20px 24px;border-radius:8px;margin-bottom:24px">
+            <h2 style="margin:0;font-size:22px">New Business Added!</h2>
+            <p style="margin:6px 0 0;font-size:13px;color:#94a3b8">Your account now has access to a new business.</p>
+          </div>
+          <p style="color:#374151;font-size:15px">Hi <strong>{html_mod.escape(owner_name)}</strong>,</p>
+          <p style="color:#6b7280;font-size:14px">
+            Your CheesePOS account has been given access to a new business:
+            <strong style="color:#111827">{html_mod.escape(business_name)}</strong>.
+          </p>
+          <p style="color:#6b7280;font-size:14px">
+            Log in with your existing credentials. After signing in, you'll be able to select which business to manage.
+          </p>
+          <div style="background:#eff6ff;border-radius:8px;padding:14px 18px;margin:20px 0;font-size:13px;color:#1d4ed8">
+            Use the same email and password you already use to log in.
+          </div>
+          <p style="color:#6b7280;font-size:13px;margin-top:24px">
+            If you didn't expect this, contact us at <a href="mailto:cheesepossupport@gmail.com" style="color:#3b82f6">cheesepossupport@gmail.com</a>
+          </p>
+        </div>
+        """,
+    )
+    thread = threading.Thread(target=_send_async, args=(app, msg))
+    thread.daemon = True
+    thread.start()
+
+
 def _send_welcome_email(app, email, business_name, owner_name, temp_password):
     msg = Message(
         subject=f'Welcome to CheesePOS — Your account is ready',
@@ -664,6 +700,11 @@ def create_tenant():
     db.session.add(outlet)
     db.session.commit()
 
+    # Seed junction table so multi-business works from the start
+    access = UserTenantAccess(user_id=owner.id, tenant_id=tenant.id, role='owner')
+    db.session.add(access)
+    db.session.commit()
+
     app = current_app._get_current_object()
     _send_welcome_email(app, email, tenant.business_name, owner.full_name, temp_password)
 
@@ -803,8 +844,11 @@ def approve_onboarding_request(req_id):
     city = data.get('city', '').strip()
     state = data.get('state', '').strip()
 
-    if User.query.filter_by(email=email).first() or Tenant.query.filter_by(email=email).first():
-        return jsonify({'error': 'Email already registered'}), 400
+    existing_user = User.query.filter_by(email=email).first()
+    existing_tenant = Tenant.query.filter_by(email=email).first()
+
+    if existing_tenant and not existing_user:
+        return jsonify({'error': 'This business email is already registered to another business'}), 400
 
     # Split owner name into first/last
     parts = owner_name.split(' ', 1)
@@ -818,7 +862,7 @@ def approve_onboarding_request(req_id):
     tenant = Tenant(
         tenant_code=tenant_code,
         business_name=business_name,
-        owner_name=owner_name,
+        owner_name=owner_name or (existing_user.full_name if existing_user else email),
         email=email,
         phone=phone,
         city=city,
@@ -829,19 +873,30 @@ def approve_onboarding_request(req_id):
     db.session.add(tenant)
     db.session.flush()
 
-    temp_password = _gen_temp_password()
-    owner = User(
-        tenant_id=tenant.id,
-        first_name=first_name,
-        last_name=last_name,
-        email=email,
-        phone=phone,
-        role='owner',
-        is_active=True,
-        must_change_password=True,
-    )
-    owner.set_password(temp_password)
-    db.session.add(owner)
+    if existing_user:
+        # Reuse existing account — just link to new tenant
+        owner = existing_user
+        temp_password = None
+        access = UserTenantAccess(user_id=existing_user.id, tenant_id=tenant.id, role='owner')
+        db.session.add(access)
+    else:
+        # Brand-new user
+        temp_password = _gen_temp_password()
+        owner = User(
+            tenant_id=tenant.id,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            phone=phone,
+            role='owner',
+            is_active=True,
+            must_change_password=True,
+        )
+        owner.set_password(temp_password)
+        db.session.add(owner)
+        db.session.flush()
+        access = UserTenantAccess(user_id=owner.id, tenant_id=tenant.id, role='owner')
+        db.session.add(access)
 
     outlet = Outlet(
         tenant_id=tenant.id,
@@ -861,11 +916,16 @@ def approve_onboarding_request(req_id):
     db.session.commit()
 
     app = current_app._get_current_object()
-    _send_welcome_email(app, email, business_name, owner_name or email, temp_password)
+    if existing_user:
+        _send_new_business_email(app, email, business_name, existing_user.full_name)
+    else:
+        _send_welcome_email(app, email, business_name, owner_name or email, temp_password)
 
+    linked = 'existing account' if existing_user else 'new account'
     return jsonify({
-        'message': 'Approved and tenant account created',
+        'message': f'Approved — tenant created and linked to {linked}',
         'tenant': tenant.to_dict(include_subscription=True),
+        'existing_user': existing_user is not None,
     }), 201
 
 

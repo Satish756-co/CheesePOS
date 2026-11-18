@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import {
   LayoutDashboard, Receipt, Table2, ShoppingCart, ChefHat,
   Package, Warehouse, Truck, TrendingDown, BarChart2, Users,
-  Settings, LogOut, Menu, X, Store, ClipboardList, Shield, CalendarDays, Headphones
+  Settings, LogOut, Menu, X, Store, ClipboardList, Shield, CalendarDays, Headphones,
+  ChevronDown, Building2
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { authAPI, supportAPI } from '@/api'
@@ -68,7 +69,9 @@ function SidebarNav({ items, supportBadge, sidebarOpen, onNavigate }) {
 export default function CustomerLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const { user, tenant, token, logout, hasPermission, refreshPermissions } = useAuthStore()
+  const [switcherOpen, setSwitcherOpen] = useState(false)
+  const [switching, setSwitching] = useState(false)
+  const { user, tenant, token, logout, hasPermission, refreshPermissions, businesses, switchBusiness } = useAuthStore()
   const navigate = useNavigate()
 
   const { data: unreadData } = useQuery({
@@ -97,6 +100,67 @@ export default function CustomerLayout() {
     try { await authAPI.logout() } catch {}
     logout()
     navigate('/login')
+  }
+
+  const handleSwitchBusiness = async (tenantId) => {
+    if (tenantId === tenant?.id) { setSwitcherOpen(false); return }
+    setSwitching(true)
+    try {
+      await switchBusiness(tenantId)
+      setSwitcherOpen(false)
+      navigate(useAuthStore.getState().getHomeRoute(), { replace: true })
+    } catch {
+      // error handled by switchBusiness via toast
+    } finally {
+      setSwitching(false)
+    }
+  }
+
+  const otherBusinesses = (businesses || []).filter(b => b.id !== tenant?.id)
+
+  const BusinessHeader = ({ expanded }) => {
+    if (!expanded) {
+      return (
+        <div className="flex items-center justify-center h-16">
+          <img src="/logo-icon.png" alt="CheesePOS" className="h-8 w-auto" />
+        </div>
+      )
+    }
+    return (
+      <div className="px-4 py-3 relative">
+        <BrandLogo theme="dark" size="sm" showSubtitle={false} businessName={tenant?.business_name} />
+        {otherBusinesses.length > 0 && (
+          <div className="mt-2">
+            <button
+              onClick={() => setSwitcherOpen(o => !o)}
+              disabled={switching}
+              className="flex items-center gap-1.5 text-xs text-sidebar-text hover:text-white transition-colors w-full"
+            >
+              <Building2 size={12} />
+              <span className="truncate flex-1 text-left">Switch business</span>
+              <ChevronDown size={12} className={`transition-transform ${switcherOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {switcherOpen && (
+              <div className="mt-1 bg-slate-800 rounded-lg overflow-hidden border border-slate-700">
+                {businesses.map(biz => (
+                  <button
+                    key={biz.id}
+                    onClick={() => handleSwitchBusiness(biz.id)}
+                    disabled={switching}
+                    className={`w-full text-left px-3 py-2 text-xs hover:bg-slate-700 transition-colors flex items-center gap-2
+                      ${biz.id === tenant?.id ? 'text-white font-medium bg-slate-700/50' : 'text-slate-300'}`}
+                  >
+                    <Building2 size={11} className="flex-shrink-0" />
+                    <span className="truncate">{biz.business_name}</span>
+                    {biz.id === tenant?.id && <span className="ml-auto text-brand-400 text-[10px]">Active</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
   }
 
   const visibleItems = navItems.filter(item => item.permission === null || hasPermission(item.permission))
@@ -131,12 +195,8 @@ export default function CustomerLayout() {
 
       {/* ── Desktop sidebar ── */}
       <aside className={`hidden md:flex flex-col bg-sidebar-bg transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-16'} flex-shrink-0`}>
-        <div className={`flex items-center border-b border-sidebar-border flex-shrink-0 ${sidebarOpen ? 'px-4 py-3' : 'justify-center h-16'}`}>
-          {sidebarOpen ? (
-            <BrandLogo theme="dark" size="sm" showSubtitle={false} businessName={tenant?.business_name} />
-          ) : (
-            <img src="/logo-icon.png" alt="CheesePOS" className="h-8 w-auto" />
-          )}
+        <div className="border-b border-sidebar-border flex-shrink-0">
+          <BusinessHeader expanded={sidebarOpen} />
         </div>
         <SidebarNav items={visibleItems} supportBadge={supportBadge} sidebarOpen={sidebarOpen} onNavigate={() => {}} />
         <UserFooter expanded={sidebarOpen} />
@@ -159,6 +219,26 @@ export default function CustomerLayout() {
             <X size={20} />
           </button>
         </div>
+        {otherBusinesses.length > 0 && (
+          <div className="px-4 py-2 border-b border-sidebar-border">
+            <p className="text-xs text-sidebar-text mb-1">Switch business</p>
+            <div className="space-y-1">
+              {businesses.map(biz => (
+                <button
+                  key={biz.id}
+                  onClick={() => { handleSwitchBusiness(biz.id); setMobileOpen(false) }}
+                  disabled={switching}
+                  className={`w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2
+                    ${biz.id === tenant?.id ? 'text-white bg-slate-700' : 'text-slate-300 hover:bg-slate-700'}`}
+                >
+                  <Building2 size={11} />
+                  <span className="truncate">{biz.business_name}</span>
+                  {biz.id === tenant?.id && <span className="ml-auto text-brand-400 text-[10px]">Active</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <SidebarNav items={visibleItems} supportBadge={supportBadge} sidebarOpen={true} onNavigate={() => setMobileOpen(false)} />
         <UserFooter expanded={true} />
       </aside>

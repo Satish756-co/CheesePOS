@@ -13,6 +13,7 @@ import AdminLayout from '@/layouts/AdminLayout'
 import Login from '@/pages/auth/Login'
 import ForgotPassword from '@/pages/auth/ForgotPassword'
 import ResetPassword from '@/pages/auth/ResetPassword'
+import SelectBusiness from '@/pages/auth/SelectBusiness'
 
 // Landing
 import Landing from '@/pages/Landing'
@@ -185,6 +186,9 @@ export default function App() {
         <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
         <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
       </Route>
+
+      {/* Business selector — outside AuthLayout so it has its own full-screen style */}
+      <Route path="/select-business" element={<SelectBusiness />} />
 
       {/* Customer portal */}
       <Route path="/app" element={

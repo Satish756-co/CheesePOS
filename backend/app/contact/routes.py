@@ -24,6 +24,7 @@ def submit_enquiry():
         return jsonify({'error': 'Invalid request'}), 400
 
     business_name = data.get('business_name', '').strip()
+    owner_name    = data.get('owner_name', '').strip()
     email = data.get('email', '').strip()
     phone = data.get('phone', '').strip()
     description = data.get('description', '').strip()
@@ -38,6 +39,7 @@ def submit_enquiry():
     # Store as onboarding request
     req = OnboardingRequest(
         business_name=business_name,
+        owner_name=owner_name or None,
         email=email,
         phone=phone,
         business_type=business_type,
@@ -68,6 +70,10 @@ def submit_enquiry():
             <tr style="border-bottom:1px solid #f3f4f6">
               <td style="padding:10px 0;color:#6b7280">Business Type</td>
               <td style="padding:10px 0;color:#111827"><strong>{html_mod.escape(btype_label)}</strong></td>
+            </tr>
+            <tr style="border-bottom:1px solid #f3f4f6">
+              <td style="padding:10px 0;color:#6b7280">Owner Name</td>
+              <td style="padding:10px 0;color:#111827">{html_mod.escape(owner_name) if owner_name else '<em style="color:#9ca3af">Not provided</em>'}</td>
             </tr>
             <tr style="border-bottom:1px solid #f3f4f6">
               <td style="padding:10px 0;color:#6b7280">Email</td>

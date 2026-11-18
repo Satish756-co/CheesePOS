@@ -19,8 +19,23 @@ export default function Login() {
     setLoading(true)
     try {
       const res = await authAPI.login(form.email, form.password)
-      const { user, tenant, access_token, refresh_token, effective_permissions } = res.data
-      setAuth(user, tenant, access_token, refresh_token, effective_permissions)
+      const data = res.data
+
+      if (data.requires_business_selection) {
+        // Multi-business — redirect to business picker
+        navigate('/select-business', {
+          state: {
+            selectionToken: data.selection_token,
+            businesses: data.businesses,
+            user: data.user,
+          },
+          replace: true,
+        })
+        return
+      }
+
+      const { user, tenant, access_token, refresh_token, effective_permissions, businesses } = data
+      setAuth(user, tenant, access_token, refresh_token, effective_permissions, businesses ?? [])
       toast.success(`Welcome back, ${user.first_name}!`)
       navigate(useAuthStore.getState().getHomeRoute(), { replace: true })
     } catch (err) {

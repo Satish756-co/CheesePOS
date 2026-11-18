@@ -26,6 +26,14 @@ export const authAPI = {
 
   setInitialPassword: (newPassword) =>
     api.post('/auth/set-initial-password', { new_password: newPassword }),
+
+  selectBusiness: (selectionToken, tenantId) =>
+    api.post('/auth/select-business', { tenant_id: tenantId }, {
+      headers: { Authorization: `Bearer ${selectionToken}` }
+    }),
+
+  switchBusiness: (tenantId) =>
+    api.post('/auth/switch-business', { tenant_id: tenantId }),
 }
 
 export const tenantsAPI = {
