@@ -843,12 +843,17 @@ def approve_onboarding_request(req_id):
     phone = data.get('phone', orq.phone).strip()
     city = data.get('city', '').strip()
     state = data.get('state', '').strip()
+    business_type = data.get('business_type', orq.business_type or 'bar_restaurant').strip()
 
     existing_user = User.query.filter_by(email=email).first()
-    existing_tenant = Tenant.query.filter_by(email=email).first()
 
-    if existing_tenant and not existing_user:
-        return jsonify({'error': 'This business email is already registered to another business'}), 400
+    # Only block if the email belongs to a tenant but no user account matches
+    # (data inconsistency guard). If existing_user is found, we link the new
+    # business to their account — the multi-business path.
+    if not existing_user:
+        existing_tenant_check = Tenant.query.filter_by(email=email).first()
+        if existing_tenant_check:
+            return jsonify({'error': 'This business email is already registered to another account'}), 400
 
     # Split owner name into first/last
     parts = owner_name.split(' ', 1)
@@ -867,6 +872,7 @@ def approve_onboarding_request(req_id):
         phone=phone,
         city=city,
         state=state,
+        business_type=business_type,
         status='trial',
         trial_ends_at=datetime.utcnow() + timedelta(days=trial_days),
     )

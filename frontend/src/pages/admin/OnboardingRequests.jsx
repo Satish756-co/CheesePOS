@@ -16,6 +16,17 @@ const STATUS_ICONS = {
   rejected: <XCircle size={14} />,
 }
 
+const BUSINESS_TYPES = [
+  { value: 'bar_restaurant', label: 'Bar & Restaurant' },
+  { value: 'saloon',         label: 'Saloon / Spa' },
+  { value: 'daily_store',    label: 'Daily Store / Kirana' },
+  { value: 'scanning_lab',   label: 'Scanning Center / Lab' },
+  { value: 'pharmacy',       label: 'Pharmacy' },
+  { value: 'retail_shop',    label: 'Retail Shop' },
+  { value: 'hr_operations',  label: 'HR Operations' },
+  { value: 'other',          label: 'Other' },
+]
+
 function RejectModal({ request, onClose, onReject }) {
   const [reason, setReason] = useState('')
   const [notify, setNotify] = useState(true)
@@ -80,6 +91,7 @@ function ApproveModal({ request, onClose, onApprove }) {
     email: request.email,
     owner_name: request.owner_name || '',
     phone: request.phone,
+    business_type: request.business_type || 'bar_restaurant',
     city: '',
     state: '',
   })
@@ -108,6 +120,14 @@ function ApproveModal({ request, onClose, onApprove }) {
             <input className="input" value={form.business_name} onChange={e => set('business_name', e.target.value)} />
           </div>
           <div>
+            <label className="label">Business Type</label>
+            <select className="input" value={form.business_type} onChange={e => set('business_type', e.target.value)}>
+              {BUSINESS_TYPES.map(bt => (
+                <option key={bt.value} value={bt.value}>{bt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="label">Owner Name</label>
             <input className="input" value={form.owner_name} onChange={e => set('owner_name', e.target.value)} />
           </div>
@@ -130,8 +150,8 @@ function ApproveModal({ request, onClose, onApprove }) {
             </div>
           </div>
         </div>
-        <p className="text-xs text-gray-400 mt-3 bg-blue-50 p-3 rounded-lg">
-          A welcome email with login credentials will be sent to the owner automatically.
+        <p className="text-xs text-gray-500 mt-3 bg-blue-50 p-3 rounded-lg">
+          If this email already has a CheesePOS account, the new business will be linked to it — no password reset needed. Otherwise, a welcome email with login credentials is sent.
         </p>
         <div className="flex gap-3 mt-5">
           <button onClick={onClose} className="btn-secondary flex-1">Cancel</button>
