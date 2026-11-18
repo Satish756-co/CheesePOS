@@ -12,14 +12,12 @@ export default defineConfig({
     obfuscatorPlugin && obfuscatorPlugin({
       options: {
         controlFlowFlattening: true,
-        controlFlowFlatteningThreshold: 0.75,
+        controlFlowFlatteningThreshold: 0.3,
         stringEncryption: true,
-        stringEncryptionThreshold: 0.75,
-        deadCodeInjection: true,
-        deadCodeInjectionThreshold: 0.4,
+        stringEncryptionThreshold: 0.5,
         identifierNamesGenerator: 'hexadecimal',
-        selfDefending: true,
-        disableConsoleOutput: true,
+        selfDefending: false,
+        disableConsoleOutput: false,
       },
     }),
   ].filter(Boolean),
