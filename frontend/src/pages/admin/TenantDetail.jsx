@@ -262,6 +262,7 @@ function AdminResetDataSection({ tenantId }) {
 }
 
 const FEATURE_LIST = [
+  { key: 'dashboard',     label: 'Dashboard & Daily Summary' },
   { key: 'billing',       label: 'Counter Billing' },
   { key: 'table_billing', label: 'Table Billing' },
   { key: 'tables',        label: 'Tables' },
@@ -274,6 +275,7 @@ const FEATURE_LIST = [
   { key: 'expenses',      label: 'Expenses' },
   { key: 'reports',       label: 'Reports' },
   { key: 'users',         label: 'Users & Roles' },
+  { key: 'roles',         label: 'Role Permissions' },
   { key: 'outlets',       label: 'Outlets' },
 ]
 
