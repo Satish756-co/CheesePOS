@@ -277,6 +277,7 @@ const FEATURE_LIST = [
   { key: 'users',         label: 'Users & Roles' },
   { key: 'roles',         label: 'Role Permissions' },
   { key: 'outlets',       label: 'Outlets' },
+  { key: 'support',       label: 'Support' },
 ]
 
 function FeatureOverridesSection({ tenantId, currentOverrides, onSaved }) {

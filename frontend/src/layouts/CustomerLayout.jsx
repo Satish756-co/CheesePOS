@@ -28,7 +28,7 @@ const navItems = [
   { to: '/app/roles',        icon: Shield,          label: 'Role Permissions',permission: 'roles' },
   { to: '/app/outlets',      icon: Store,           label: 'Outlets',         permission: 'outlets' },
   { to: '/app/settings',     icon: Settings,        label: 'Settings',        permission: null },
-  { to: '/app/support',      icon: Headphones,      label: 'Support',         permission: null },
+  { to: '/app/support',      icon: Headphones,      label: 'Support',         permission: 'support' },
 ]
 
 function SidebarNav({ items, supportBadge, sidebarOpen, onNavigate }) {

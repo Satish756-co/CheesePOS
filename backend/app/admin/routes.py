@@ -693,7 +693,7 @@ def delete_tenant(tenant_id):
 ALLOWED_FEATURE_KEYS = [
     'billing', 'table_billing', 'tables', 'orders', 'sales_log', 'kot',
     'products', 'inventory', 'purchases', 'expenses', 'reports',
-    'users', 'roles', 'outlets', 'dashboard',
+    'users', 'roles', 'outlets', 'dashboard', 'support',
 ]
 
 @admin_bp.route('/tenants/<int:tenant_id>/feature-overrides', methods=['PUT'])
