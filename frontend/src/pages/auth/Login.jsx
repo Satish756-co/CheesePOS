@@ -4,11 +4,13 @@ import { useAuthStore } from '@/store/authStore'
 import { authAPI } from '@/api'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import EnquiryModal from '@/components/EnquiryModal'
 
 export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [showContact, setShowContact] = useState(false)
   const { setAuth } = useAuthStore()
   const navigate = useNavigate()
 
@@ -87,10 +89,16 @@ export default function Login() {
 
       <p className="text-center text-sm text-gray-500 mt-6">
         Need an account?{' '}
-        <a href="mailto:cheesepossupport@gmail.com" className="text-brand-600 hover:text-brand-700 font-medium">
+        <button
+          type="button"
+          onClick={() => setShowContact(true)}
+          className="text-brand-600 hover:text-brand-700 font-medium"
+        >
           Contact us
-        </a>
+        </button>
       </p>
+
+      {showContact && <EnquiryModal onClose={() => setShowContact(false)} />}
     </div>
   )
 }
