@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminAPI } from '@/api'
 import { formatCurrency, formatDate } from '@/utils/formatters'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Building2, Users, Store, CreditCard, X, Sliders, AlertTriangle, Clock, RotateCcw, Trash2, KeyRound, Copy } from 'lucide-react'
+import { ArrowLeft, Building2, Users, Store, CreditCard, X, Sliders, AlertTriangle, Clock, RotateCcw, Trash2, KeyRound, Copy, ToggleLeft, ToggleRight } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
 
 function ActivateSubscriptionModal({ tenantId, plans, onClose, onSave }) {
@@ -261,6 +261,95 @@ function AdminResetDataSection({ tenantId }) {
   )
 }
 
+const FEATURE_LIST = [
+  { key: 'billing',       label: 'Counter Billing' },
+  { key: 'table_billing', label: 'Table Billing' },
+  { key: 'tables',        label: 'Tables' },
+  { key: 'orders',        label: 'Orders' },
+  { key: 'kot',           label: 'Kitchen / KOT' },
+  { key: 'sales_log',     label: 'Sales Log' },
+  { key: 'products',      label: 'Products' },
+  { key: 'inventory',     label: 'Inventory' },
+  { key: 'purchases',     label: 'Purchases' },
+  { key: 'expenses',      label: 'Expenses' },
+  { key: 'reports',       label: 'Reports' },
+  { key: 'users',         label: 'Users & Roles' },
+  { key: 'outlets',       label: 'Outlets' },
+]
+
+function FeatureOverridesSection({ tenantId, currentOverrides, onSaved }) {
+  const qc = useQueryClient()
+  const [overrides, setOverrides] = useState(() => currentOverrides || {})
+
+  const isDisabled = (key) => overrides[key] === false
+
+  const toggle = (key) => {
+    setOverrides(prev => {
+      const next = { ...prev }
+      if (next[key] === false) {
+        delete next[key]  // remove override → enabled
+      } else {
+        next[key] = false  // set to false → disabled
+      }
+      return next
+    })
+  }
+
+  const save = useMutation({
+    mutationFn: () => adminAPI.updateFeatureOverrides(tenantId, overrides),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-tenant', String(tenantId)] })
+      toast.success('Feature settings saved')
+      onSaved?.()
+    },
+    onError: (err) => toast.error(err.response?.data?.error || 'Save failed'),
+  })
+
+  const hasChanges = JSON.stringify(overrides) !== JSON.stringify(currentOverrides || {})
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-5 md:col-span-2">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-bold text-gray-900 flex items-center gap-2">
+          <ToggleRight size={16} /> Feature Access
+        </h2>
+        <p className="text-xs text-gray-400">Toggle off to hide tab from this customer</p>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+        {FEATURE_LIST.map(({ key, label }) => {
+          const off = isDisabled(key)
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => toggle(key)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-colors
+                ${off
+                  ? 'bg-red-50 border-red-200 text-red-600'
+                  : 'bg-green-50 border-green-200 text-green-700'
+                }`}
+            >
+              {off
+                ? <ToggleLeft size={16} className="flex-shrink-0" />
+                : <ToggleRight size={16} className="flex-shrink-0" />}
+              {label}
+            </button>
+          )
+        })}
+      </div>
+      {hasChanges && (
+        <button
+          onClick={() => save.mutate()}
+          disabled={save.isPending}
+          className="btn-primary text-sm py-1.5 px-4"
+        >
+          {save.isPending ? 'Saving…' : 'Save Changes'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function AdminTenantDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -492,6 +581,11 @@ export default function AdminTenantDetail() {
             )}
           </div>
         </div>
+          <FeatureOverridesSection
+            tenantId={parseInt(id)}
+            currentOverrides={tenant.feature_overrides}
+            onSaved={() => qc.invalidateQueries({ queryKey: ['admin-tenant', id] })}
+          />
         <AdminResetDataSection tenantId={parseInt(id)} />
         </>
       )}

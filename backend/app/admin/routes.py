@@ -688,6 +688,34 @@ def delete_tenant(tenant_id):
     return jsonify(tenant.to_dict())
 
 
+# ─── Admin: per-tenant feature overrides ─────────────────────────────────────
+
+ALLOWED_FEATURE_KEYS = [
+    'billing', 'table_billing', 'tables', 'orders', 'sales_log', 'kot',
+    'products', 'inventory', 'purchases', 'expenses', 'reports',
+    'users', 'roles', 'outlets', 'dashboard',
+]
+
+@admin_bp.route('/tenants/<int:tenant_id>/feature-overrides', methods=['PUT'])
+@jwt_required()
+@super_admin_required
+def update_feature_overrides(tenant_id):
+    tenant = Tenant.query.get_or_404(tenant_id)
+    data = request.get_json() or {}
+
+    overrides = {}
+    for key in ALLOWED_FEATURE_KEYS:
+        if key in data:
+            val = data[key]
+            if val is False:
+                overrides[key] = False   # explicitly disabled
+            # True or None = remove override (use plan/role default)
+
+    tenant.feature_overrides = overrides
+    db.session.commit()
+    return jsonify({'feature_overrides': tenant.feature_overrides})
+
+
 # ─── Admin: reset a user's password ─────────────────────────────────────────
 
 @admin_bp.route('/tenants/<int:tenant_id>/users/<int:user_id>/reset-password', methods=['POST'])

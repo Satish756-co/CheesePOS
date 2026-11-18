@@ -85,7 +85,9 @@ def login():
         'refresh_token': refresh_token,
         'user': user.to_dict(),
         'tenant': Tenant.query.get(user.tenant_id).to_dict(include_subscription=True) if user.tenant_id else None,
-        'effective_permissions': get_role_config(user.tenant_id, user.role) if user.tenant_id else None,
+        'effective_permissions': get_role_config(user.tenant_id, user.role,
+            Tenant.query.get(user.tenant_id).feature_overrides if user.tenant_id else None
+        ) if user.tenant_id else None,
     })
 
 
@@ -119,7 +121,9 @@ def get_me():
     if user.tenant_id:
         tenant = Tenant.query.get(user.tenant_id)
         response['tenant'] = tenant.to_dict(include_subscription=True) if tenant else None
-        response['effective_permissions'] = get_role_config(user.tenant_id, user.role)
+        response['effective_permissions'] = get_role_config(user.tenant_id, user.role,
+            tenant.feature_overrides if tenant else None
+        )
 
     return jsonify(response)
 

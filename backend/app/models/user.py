@@ -98,17 +98,26 @@ ROLE_DEFAULT_CONFIGS = {
 }
 
 
-def get_role_config(tenant_id, role):
-    """Return effective permission config for a role: DB override if set, else defaults."""
+def get_role_config(tenant_id, role, feature_overrides=None):
+    """Return effective permission config for a role: DB override if set, else defaults.
+    feature_overrides: dict of {page: False} set by super admin to disable features tenant-wide.
+    """
     if role in ('owner', 'super_admin'):
-        return {'pages': ['*'], 'actions': ['*'], 'approvals': [], 'data_scope': 'all'}
-    config = TenantRoleConfig.query.filter_by(tenant_id=tenant_id, role=role).first()
-    if config:
-        return {'pages': config.pages, 'actions': config.actions,
-                'approvals': config.approvals, 'data_scope': config.data_scope}
-    return ROLE_DEFAULT_CONFIGS.get(
-        role, {'pages': [], 'actions': [], 'approvals': [], 'data_scope': 'all'}
-    )
+        config = {'pages': ['*'], 'actions': ['*'], 'approvals': [], 'data_scope': 'all'}
+    else:
+        db_config = TenantRoleConfig.query.filter_by(tenant_id=tenant_id, role=role).first()
+        if db_config:
+            config = {'pages': db_config.pages, 'actions': db_config.actions,
+                      'approvals': db_config.approvals, 'data_scope': db_config.data_scope}
+        else:
+            config = ROLE_DEFAULT_CONFIGS.get(
+                role, {'pages': [], 'actions': [], 'approvals': [], 'data_scope': 'all'}
+            )
+
+    # Attach disabled_features so the frontend can block them even for owner/admin
+    disabled = [k for k, v in (feature_overrides or {}).items() if v is False]
+    config['disabled_features'] = disabled
+    return config
 
 
 class TenantRoleConfig(db.Model, TimestampMixin):

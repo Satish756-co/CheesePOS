@@ -72,9 +72,16 @@ export const useAuthStore = create(
         const user = get().user
         if (!user) return false
         if (user.is_super_admin) return true
-        if (user.role === 'owner') return true
 
         const perms = get().effectivePermissions
+
+        // Admin can disable features tenant-wide — blocks all roles including owner
+        const disabled = perms?.disabled_features ?? []
+        const permList = Array.isArray(permission) ? permission : [permission]
+        if (permList.every(p => disabled.includes(p))) return false
+
+        if (user.role === 'owner') return true
+
         const pages = perms?.pages ?? FALLBACK_ROLE_PAGES[user.role] ?? []
         if (pages.includes('*')) return true
 

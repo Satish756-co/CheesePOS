@@ -174,6 +174,7 @@ export const adminAPI = {
   deleteTenant: (id) => api.delete(`/admin/tenants/${id}`),
   reactivateTenant: (id) => api.post(`/admin/tenants/${id}/reactivate`),
   resetUserPassword: (tenantId, userId) => api.post(`/admin/tenants/${tenantId}/users/${userId}/reset-password`),
+  updateFeatureOverrides: (tenantId, overrides) => api.put(`/admin/tenants/${tenantId}/feature-overrides`, overrides),
 }
 
 export const supportAPI = {
