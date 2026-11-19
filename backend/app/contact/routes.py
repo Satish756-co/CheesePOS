@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_mail import Message
-from app.extensions import mail, limiter
+from app.extensions import db, mail, limiter
+from app.models.onboarding import OnboardingRequest, BUSINESS_TYPES
 import html as html_mod
 import threading
 
@@ -23,25 +24,66 @@ def submit_enquiry():
         return jsonify({'error': 'Invalid request'}), 400
 
     business_name = data.get('business_name', '').strip()
+    owner_name    = data.get('owner_name', '').strip()
     email = data.get('email', '').strip()
     phone = data.get('phone', '').strip()
     description = data.get('description', '').strip()
+    business_type = data.get('business_type', 'bar_restaurant').strip()
+    city    = data.get('city', '').strip()
+    state   = data.get('state', '').strip()
+    country = data.get('country', '').strip()
+    pincode = data.get('pincode', '').strip()
 
-    if not business_name or not email or not phone:
-        return jsonify({'error': 'Business name, email and phone are required'}), 400
+    if not business_name or not owner_name or not email or not phone or not description:
+        return jsonify({'error': 'Business name, owner name, email, phone and message are required'}), 400
+    if not city or not state or not country or not pincode:
+        return jsonify({'error': 'City, state, country and pincode are required'}), 400
+
+    if business_type not in BUSINESS_TYPES:
+        business_type = 'other'
+
+    # Store as onboarding request
+    req = OnboardingRequest(
+        business_name=business_name,
+        owner_name=owner_name,
+        email=email,
+        phone=phone,
+        business_type=business_type,
+        description=description,
+        city=city,
+        state=state,
+        country=country,
+        pincode=pincode,
+        status='pending',
+    )
+    db.session.add(req)
+    db.session.commit()
+
+    # Notify admin by email
+    from app.models.onboarding import BUSINESS_TYPE_LABELS
+    btype_label = BUSINESS_TYPE_LABELS.get(business_type, business_type)
 
     msg = Message(
-        subject=f'New CheesePOS Enquiry — {business_name}',
+        subject=f'New Onboarding Request — {business_name} ({btype_label})',
         recipients=['cheesepossupport@gmail.com'],
         html=f"""
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
           <div style="background:#2563eb;color:#fff;padding:16px 24px;border-radius:8px;margin-bottom:24px">
-            <h2 style="margin:0;font-size:20px">New Enquiry — CheesePOS</h2>
+            <h2 style="margin:0;font-size:20px">New Onboarding Request</h2>
+            <p style="margin:6px 0 0;font-size:13px;color:#bfdbfe">Review and approve from your admin panel.</p>
           </div>
           <table style="width:100%;border-collapse:collapse;font-size:14px">
             <tr style="border-bottom:1px solid #f3f4f6">
-              <td style="padding:10px 0;color:#6b7280;width:140px">Business Name</td>
+              <td style="padding:10px 0;color:#6b7280;width:150px">Business Name</td>
               <td style="padding:10px 0;font-weight:bold;color:#111827">{html_mod.escape(business_name)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #f3f4f6">
+              <td style="padding:10px 0;color:#6b7280">Business Type</td>
+              <td style="padding:10px 0;color:#111827"><strong>{html_mod.escape(btype_label)}</strong></td>
+            </tr>
+            <tr style="border-bottom:1px solid #f3f4f6">
+              <td style="padding:10px 0;color:#6b7280">Owner Name</td>
+              <td style="padding:10px 0;color:#111827">{html_mod.escape(owner_name) if owner_name else '<em style="color:#9ca3af">Not provided</em>'}</td>
             </tr>
             <tr style="border-bottom:1px solid #f3f4f6">
               <td style="padding:10px 0;color:#6b7280">Email</td>
@@ -51,13 +93,17 @@ def submit_enquiry():
               <td style="padding:10px 0;color:#6b7280">Phone</td>
               <td style="padding:10px 0;color:#111827">{html_mod.escape(phone)}</td>
             </tr>
+            <tr style="border-bottom:1px solid #f3f4f6">
+              <td style="padding:10px 0;color:#6b7280">Location</td>
+              <td style="padding:10px 0;color:#111827">{html_mod.escape(city)}, {html_mod.escape(state)} - {html_mod.escape(pincode)}, {html_mod.escape(country)}</td>
+            </tr>
             <tr>
               <td style="padding:10px 0;color:#6b7280;vertical-align:top">Message</td>
-              <td style="padding:10px 0;color:#111827">{html_mod.escape(description) if description else '<em style="color:#9ca3af">No message provided</em>'}</td>
+              <td style="padding:10px 0;color:#111827">{html_mod.escape(description) if description else '<em style="color:#9ca3af">No message</em>'}</td>
             </tr>
           </table>
-          <div style="margin-top:24px;padding:12px 16px;background:#f0fdf4;border-radius:8px;font-size:13px;color:#166534">
-            Reply directly to this email to respond to the enquiry.
+          <div style="margin-top:24px;padding:12px 16px;background:#eff6ff;border-radius:8px;font-size:13px;color:#1d4ed8">
+            Log in to your admin panel → Onboarding Requests to review and approve.
           </div>
         </div>
         """,
@@ -70,3 +116,11 @@ def submit_enquiry():
     thread.start()
 
     return jsonify({'message': 'Enquiry received successfully'}), 200
+
+
+@contact_bp.route('/business-types', methods=['GET'])
+def get_business_types():
+    from app.models.onboarding import BUSINESS_TYPE_LABELS
+    return jsonify([
+        {'value': k, 'label': v} for k, v in BUSINESS_TYPE_LABELS.items()
+    ])

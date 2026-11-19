@@ -8,7 +8,8 @@ import uuid
 from app.extensions import db
 from app.models import (
     Invoice, InvoiceItem, BillPayment, Order, OrderItem,
-    Product, ProductVariant, StockBalance, InventoryLedger, Outlet
+    Product, ProductVariant, StockBalance, InventoryLedger, Outlet,
+    User, get_role_config,
 )
 from app.auth.decorators import tenant_required, permission_required
 from app.auth.routes import log_audit
@@ -124,7 +125,9 @@ def create_invoice():
 
     discount_amount = Decimal(str(data.get('discount_amount', 0)))
     service_charge = Decimal(str(data.get('service_charge', 0)))
-    taxable_amount = total_taxable - discount_amount
+    if discount_amount < 0 or service_charge < 0:
+        return jsonify({'error': 'Discount and service charge cannot be negative'}), 400
+    taxable_amount = max(Decimal('0'), total_taxable - discount_amount)
     total_before_round = taxable_amount + total_tax + service_charge
     round_off = round(total_before_round) - total_before_round
     total_amount = total_before_round + round_off
@@ -161,16 +164,20 @@ def create_invoice():
     payments_data = data.get('payments', [])
     paid_amount = Decimal('0')
     for pmt in payments_data:
+        pmode = pmt.get('payment_mode')
+        pamount = pmt.get('amount')
+        if not pmode or pamount is None:
+            return jsonify({'error': 'Each payment must have payment_mode and amount'}), 400
         payment = BillPayment(
             invoice_id=invoice.id,
             tenant_id=tenant_id,
             outlet_id=outlet.id,
-            payment_mode=pmt['payment_mode'],
-            amount=Decimal(str(pmt['amount'])),
+            payment_mode=pmode,
+            amount=Decimal(str(pamount)),
             reference_number=pmt.get('reference_number'),
         )
         db.session.add(payment)
-        paid_amount += Decimal(str(pmt['amount']))
+        paid_amount += Decimal(str(pamount))
 
     invoice.paid_amount = paid_amount
     invoice.change_amount = max(paid_amount - total_amount, Decimal('0'))
@@ -187,6 +194,11 @@ def create_invoice():
                 reset_batch_id=None,
             ).first()
             if stock:
+                if stock.current_stock < inv_item.quantity:
+                    db.session.rollback()
+                    prod = Product.query.get(inv_item.product_id)
+                    name = prod.name if prod else f'product {inv_item.product_id}'
+                    return jsonify({'error': f'Insufficient stock for {name}'}), 400
                 stock.current_stock -= inv_item.quantity
                 ledger = InventoryLedger(
                     tenant_id=tenant_id,
@@ -226,6 +238,7 @@ def create_invoice():
 def list_invoices():
     claims = get_jwt()
     tenant_id = claims.get('tenant_id')
+    user_id = int(get_jwt_identity())
     outlet_id = request.args.get('outlet_id', type=int)
     billing_type = request.args.get('billing_type')
     status = request.args.get('status')
@@ -235,6 +248,19 @@ def list_invoices():
     per_page = request.args.get('per_page', 50, type=int)
 
     q = Invoice.query.filter_by(tenant_id=tenant_id).filter(Invoice.reset_batch_id.is_(None))
+
+    # Enforce data_scope from role config
+    current_user = User.query.get(user_id)
+    if current_user and current_user.role not in ('owner', 'admin'):
+        role_cfg = get_role_config(tenant_id, current_user.role)
+        scope = role_cfg.get('data_scope', 'all')
+        if scope == 'own':
+            q = q.filter(Invoice.cashier_id == user_id)
+        elif scope == 'outlet':
+            assigned = current_user.outlet_ids or []
+            if assigned:
+                q = q.filter(Invoice.outlet_id.in_(assigned))
+
     if outlet_id:
         q = q.filter_by(outlet_id=outlet_id)
     if billing_type:
@@ -273,8 +299,12 @@ def get_invoice(invoice_id):
 def cancel_invoice(invoice_id):
     claims = get_jwt()
     tenant_id = claims.get('tenant_id')
+    caller_role = claims.get('role')
     user_id = int(get_jwt_identity())
     invoice = Invoice.query.filter_by(id=invoice_id, tenant_id=tenant_id).filter(Invoice.reset_batch_id.is_(None)).first_or_404()
+
+    if caller_role not in ('owner', 'admin', 'manager') and invoice.cashier_id != user_id:
+        return jsonify({'error': 'You can only cancel invoices you created'}), 403
 
     if invoice.status == 'cancelled':
         return jsonify({'error': 'Invoice already cancelled'}), 400

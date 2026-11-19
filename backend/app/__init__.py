@@ -53,6 +53,7 @@ def create_app(env='development'):
     from app.support.routes import support_bp
     from app.users.routes import users_bp
     from app.contact.routes import contact_bp
+    from app.salon.routes import salon_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(tenants_bp, url_prefix='/api/tenants')
@@ -71,6 +72,7 @@ def create_app(env='development'):
     app.register_blueprint(support_bp, url_prefix='/api/support')
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(contact_bp, url_prefix='/api/contact')
+    app.register_blueprint(salon_bp, url_prefix='/api/salon')
 
     # Health check
     @app.route('/api/health')

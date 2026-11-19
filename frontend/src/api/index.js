@@ -26,6 +26,17 @@ export const authAPI = {
 
   setInitialPassword: (newPassword) =>
     api.post('/auth/set-initial-password', { new_password: newPassword }),
+
+  acceptTerms: () =>
+    api.post('/auth/accept-terms'),
+
+  selectBusiness: (selectionToken, tenantId) =>
+    api.post('/auth/select-business', { tenant_id: tenantId }, {
+      headers: { Authorization: `Bearer ${selectionToken}` }
+    }),
+
+  switchBusiness: (tenantId) =>
+    api.post('/auth/switch-business', { tenant_id: tenantId }),
 }
 
 export const tenantsAPI = {
@@ -173,6 +184,11 @@ export const adminAPI = {
   createTenant: (data) => api.post('/admin/tenants', data),
   deleteTenant: (id) => api.delete(`/admin/tenants/${id}`),
   reactivateTenant: (id) => api.post(`/admin/tenants/${id}/reactivate`),
+  resetUserPassword: (tenantId, userId) => api.post(`/admin/tenants/${tenantId}/users/${userId}/reset-password`),
+  updateFeatureOverrides: (tenantId, overrides) => api.put(`/admin/tenants/${tenantId}/feature-overrides`, overrides),
+  listOnboardingRequests: (params) => api.get('/admin/onboarding-requests', { params }),
+  approveOnboardingRequest: (id, data) => api.post(`/admin/onboarding-requests/${id}/approve`, data),
+  rejectOnboardingRequest: (id, data) => api.post(`/admin/onboarding-requests/${id}/reject`, data),
 }
 
 export const supportAPI = {
@@ -184,4 +200,52 @@ export const supportAPI = {
   submitFeedback: (id, data) => api.patch(`/support/tickets/${id}/feedback`, data),
   markRead: (id) => api.patch(`/support/tickets/${id}/read`),
   getUnreadCount: () => api.get('/support/unread-count'),
+}
+
+export const salonAPI = {
+  // Categories
+  listCategories:  ()         => api.get('/salon/service-categories'),
+  createCategory:  (data)     => api.post('/salon/service-categories', data),
+  updateCategory:  (id, data) => api.put(`/salon/service-categories/${id}`, data),
+
+  // Services
+  listServices:    (params)   => api.get('/salon/services', { params }),
+  createService:   (data)     => api.post('/salon/services', data),
+  updateService:   (id, data) => api.put(`/salon/services/${id}`, data),
+
+  // Packages
+  listPackages:    (params)   => api.get('/salon/packages', { params }),
+  createPackage:   (data)     => api.post('/salon/packages', data),
+  updatePackage:   (id, data) => api.put(`/salon/packages/${id}`, data),
+
+  // Outlet prices
+  getServiceOutletPrices:  (id)       => api.get(`/salon/services/${id}/outlet-prices`),
+  updateServiceOutletPrices: (id, data) => api.put(`/salon/services/${id}/outlet-prices`, data),
+  getPackageOutletPrices:  (id)       => api.get(`/salon/packages/${id}/outlet-prices`),
+  updatePackageOutletPrices: (id, data) => api.put(`/salon/packages/${id}/outlet-prices`, data),
+
+  // Coupons
+  listCoupons:     (params)   => api.get('/salon/coupons', { params }),
+  createCoupon:    (data)     => api.post('/salon/coupons', data),
+  updateCoupon:    (id, data) => api.put(`/salon/coupons/${id}`, data),
+  validateCoupon:  (data)     => api.post('/salon/coupons/validate', data),
+
+  // Billing
+  createBill:      (data)     => api.post('/salon/bills', data),
+  listBills:       (params)   => api.get('/salon/bills', { params }),
+  getBill:         (id)       => api.get(`/salon/bills/${id}`),
+  cancelBill:      (id)       => api.post(`/salon/bills/${id}/cancel`),
+  requestCancelBill: (id, data) => api.post(`/salon/bills/${id}/cancel-request`, data),
+  listCancelRequests: (params) => api.get('/salon/cancel-requests', { params }),
+  approveCancelRequest: (id, data) => api.post(`/salon/cancel-requests/${id}/approve`, data),
+  rejectCancelRequest: (id, data) => api.post(`/salon/cancel-requests/${id}/reject`, data),
+
+  // Summary
+  getSummary:         (params)   => api.get('/salon/summary', { params }),
+  getStaffSummary:    (params)   => api.get('/salon/summary/staff', { params }),
+  getSummaryAllOutlets: (params) => api.get('/salon/summary/all-outlets', { params }),
+
+  // Reports
+  getReportsDaily:    (params)   => api.get('/salon/reports/daily', { params }),
+  getReportsServices: (params)   => api.get('/salon/reports/services', { params }),
 }

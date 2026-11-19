@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { expensesAPI } from '@/api'
+import { expensesAPI, usersAPI } from '@/api'
 import { useUserOutlets } from '@/hooks/useUserOutlets'
 import { formatCurrency, formatDate, todayIST } from '@/utils/formatters'
 import { exportToExcel, EXPENSES_COLUMNS } from '@/utils/exportExcel'
@@ -15,6 +15,12 @@ const EXPENSE_CATEGORIES = [
 
 const PAYMENT_MODES = ['cash', 'bank_transfer', 'upi', 'cheque', 'card']
 
+const CATEGORY_COLORS = {
+  rent: 'badge-blue', electricity: 'badge-yellow', salaries: 'badge-orange',
+  maintenance: 'badge-gray', transport: 'badge-blue', cleaning: 'badge-green',
+  marketing: 'badge-red', other: 'badge-gray',
+}
+
 function ExpenseModal({ expense, outlets, onClose, onSave }) {
   const [form, setForm] = useState(expense ? {
     outlet_id: expense.outlet_id,
@@ -24,6 +30,7 @@ function ExpenseModal({ expense, outlets, onClose, onSave }) {
     amount: expense.amount,
     payment_mode: expense.payment_mode,
     reference_number: expense.reference_number || '',
+    staff_id: expense.staff_id || '',
   } : {
     outlet_id: outlets[0]?.id || '',
     expense_date: todayIST(),
@@ -32,9 +39,17 @@ function ExpenseModal({ expense, outlets, onClose, onSave }) {
     amount: '',
     payment_mode: 'cash',
     reference_number: '',
+    staff_id: '',
   })
   const [saving, setSaving] = useState(false)
   const u = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => usersAPI.list().then(r => r.data),
+    enabled: form.category === 'salaries',
+  })
+  const staffUsers = users.filter(u => u.role !== 'owner' && u.is_active)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -72,7 +87,7 @@ function ExpenseModal({ expense, outlets, onClose, onSave }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Category *</label>
-              <select className="input" value={form.category} onChange={e => u('category', e.target.value)}>
+              <select className="input" value={form.category} onChange={e => { u('category', e.target.value); if (e.target.value !== 'salaries') u('staff_id', '') }}>
                 {EXPENSE_CATEGORIES.map(c => <option key={c} value={c} className="capitalize">{c}</option>)}
               </select>
             </div>
@@ -81,6 +96,17 @@ function ExpenseModal({ expense, outlets, onClose, onSave }) {
               <input type="number" className="input" value={form.amount} onChange={e => u('amount', e.target.value)} required min="0" step="0.01" />
             </div>
           </div>
+          {form.category === 'salaries' && (
+            <div>
+              <label className="label">Staff Member *</label>
+              <select className="input" value={form.staff_id} onChange={e => u('staff_id', e.target.value ? parseInt(e.target.value) : '')} required>
+                <option value="">— Select staff member —</option>
+                {staffUsers.map(s => (
+                  <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.role})</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="label">Description *</label>
             <input className="input" value={form.description} onChange={e => u('description', e.target.value)} required placeholder="What was this expense for?" />
@@ -143,12 +169,6 @@ export default function Expenses() {
   const expenses = expenseData?.expenses || []
   const totalAmount = expenseData?.total_amount || 0
 
-  const CATEGORY_COLORS = {
-    rent: 'badge-blue', electricity: 'badge-yellow', salaries: 'badge-orange',
-    maintenance: 'badge-gray', transport: 'badge-blue', cleaning: 'badge-green',
-    marketing: 'badge-red', other: 'badge-gray',
-  }
-
   return (
     <div className="p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -197,6 +217,7 @@ export default function Expenses() {
                 <th className="table-header">Date</th>
                 <th className="table-header">Category</th>
                 <th className="table-header">Description</th>
+                <th className="table-header">Staff</th>
                 <th className="table-header">Outlet</th>
                 <th className="table-header">Payment</th>
                 <th className="table-header">Amount</th>
@@ -211,6 +232,11 @@ export default function Expenses() {
                     <span className={`badge ${CATEGORY_COLORS[e.category] || 'badge-gray'} capitalize`}>{e.category}</span>
                   </td>
                   <td className="table-cell text-sm text-gray-700">{e.description}</td>
+                  <td className="table-cell text-sm text-gray-500">
+                    {e.category === 'salaries' && e.staff_name ? (
+                      <span className="text-brand-600 font-medium">{e.staff_name}</span>
+                    ) : '—'}
+                  </td>
                   <td className="table-cell text-sm text-gray-500">{e.outlet_name || '—'}</td>
                   <td className="table-cell text-xs text-gray-400 capitalize">{e.payment_mode?.replace('_', ' ')}</td>
                   <td className="table-cell font-medium text-red-600">{formatCurrency(e.amount)}</td>
@@ -224,7 +250,7 @@ export default function Expenses() {
             </tbody>
             <tfoot className="bg-gray-50 border-t border-gray-200">
               <tr>
-                <td colSpan={5} className="table-cell font-bold text-right text-gray-700">Total</td>
+                <td colSpan={6} className="table-cell font-bold text-right text-gray-700">Total</td>
                 <td className="table-cell font-bold text-red-600">{formatCurrency(totalAmount)}</td>
                 <td className="table-cell" />
               </tr>

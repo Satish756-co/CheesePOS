@@ -4,119 +4,14 @@ import { roleConfigAPI } from '@/api'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 import {
-  Shield, LayoutDashboard, Receipt, Table2, ShoppingCart, ChefHat,
-  Package, Warehouse, Truck, TrendingDown, BarChart2, Users,
-  Store, ClipboardList, RotateCcw, Save, CheckCircle2, XCircle, Info, Lock
+  Shield, RotateCcw, Save, CheckCircle2, XCircle, Info, Lock,
 } from 'lucide-react'
-
-// ─── Permission definitions ───────────────────────────────────────────────────
-
-const PAGES = [
-  { key: 'dashboard',    label: 'Dashboard',       icon: LayoutDashboard },
-  { key: 'billing',      label: 'Counter Billing',  icon: Receipt },
-  { key: 'table_billing',label: 'Table Billing',    icon: Table2 },
-  { key: 'orders',       label: 'Orders',           icon: ShoppingCart },
-  { key: 'tables',       label: 'Tables',           icon: Table2 },
-  { key: 'sales_log',    label: 'Sales Log',        icon: ClipboardList },
-  { key: 'kot',          label: 'Kitchen / KOT',    icon: ChefHat },
-  { key: 'products',     label: 'Products',         icon: Package },
-  { key: 'inventory',    label: 'Inventory',        icon: Warehouse },
-  { key: 'purchases',    label: 'Purchases',        icon: Truck },
-  { key: 'expenses',     label: 'Expenses',         icon: TrendingDown },
-  { key: 'reports',      label: 'Reports',          icon: BarChart2 },
-  { key: 'users',        label: 'Users & Roles',    icon: Users },
-  { key: 'roles',        label: 'Role Permissions', icon: Shield },
-  { key: 'outlets',      label: 'Outlets',          icon: Store },
-]
-
-const ACTION_GROUPS = [
-  {
-    label: 'Billing',
-    actions: [
-      { key: 'billing.view',        label: 'View bills & invoices' },
-      { key: 'billing.create',      label: 'Create new bill' },
-      { key: 'billing.cancel_own',  label: 'Cancel own bills' },
-      { key: 'billing.cancel',      label: 'Cancel any bill' },
-      { key: 'billing.discount',    label: 'Apply discounts' },
-    ],
-  },
-  {
-    label: 'Orders & Tables',
-    actions: [
-      { key: 'orders.view',   label: 'View orders' },
-      { key: 'orders.create', label: 'Create / add items to order' },
-      { key: 'orders.edit',   label: 'Edit order items' },
-      { key: 'orders.cancel', label: 'Cancel orders' },
-      { key: 'tables.view',   label: 'View table status' },
-      { key: 'tables.update', label: 'Update table status' },
-    ],
-  },
-  {
-    label: 'Kitchen',
-    actions: [
-      { key: 'kot.view',   label: 'View KOT tickets' },
-      { key: 'kot.update', label: 'Update KOT status' },
-    ],
-  },
-  {
-    label: 'Inventory & Purchases',
-    actions: [
-      { key: 'inventory.view',      label: 'View stock levels' },
-      { key: 'inventory.adjust',    label: 'Adjust stock' },
-      { key: 'purchases.view',      label: 'View purchase orders' },
-      { key: 'purchases.create',    label: 'Create purchase orders' },
-      { key: 'purchases.approve',   label: 'Approve purchases' },
-      { key: 'purchases.receive',   label: 'Mark purchases as received' },
-    ],
-  },
-  {
-    label: 'Expenses',
-    actions: [
-      { key: 'expenses.view',    label: 'View expenses' },
-      { key: 'expenses.create',  label: 'Record new expenses' },
-      { key: 'expenses.approve', label: 'Approve expenses' },
-    ],
-  },
-  {
-    label: 'Reports',
-    actions: [
-      { key: 'reports.view',   label: 'View reports & analytics' },
-      { key: 'reports.export', label: 'Export data to Excel (all pages)' },
-    ],
-  },
-  {
-    label: 'Users',
-    actions: [
-      { key: 'users.view',   label: 'View staff list' },
-      { key: 'users.create', label: 'Add new users' },
-      { key: 'users.edit',   label: 'Edit user details & roles' },
-    ],
-  },
-]
-
-const APPROVAL_OPTIONS = [
-  { key: 'billing.cancel',       label: 'Bill cancellation requires manager approval' },
-  { key: 'billing.discount_high',label: 'Discount above 10% requires manager approval' },
-  { key: 'orders.cancel',        label: 'Order cancellation requires manager approval' },
-  { key: 'expenses.create',      label: 'Recording expenses requires approval' },
-  { key: 'purchases.approve',    label: 'Purchase orders require manager approval' },
-]
+import { BUSINESS_CONFIG } from '@/config/businessConfig'
 
 const DATA_SCOPES = [
   { value: 'own',    label: 'Own records only',    desc: 'Can only see records they personally created' },
   { value: 'outlet', label: 'Assigned outlet',     desc: 'Can see all records for their assigned outlet(s)' },
   { value: 'all',    label: 'All records',          desc: 'Full visibility across all outlets' },
-]
-
-const CONFIGURABLE_ROLES = [
-  { key: 'owner',             label: 'Owner',           locked: true },
-  { key: 'admin',             label: 'Admin' },
-  { key: 'manager',           label: 'Manager' },
-  { key: 'cashier',           label: 'Cashier' },
-  { key: 'waiter',            label: 'Waiter' },
-  { key: 'kitchen',           label: 'Kitchen Staff' },
-  { key: 'inventory_manager', label: 'Inventory Manager' },
-  { key: 'accountant',        label: 'Accountant' },
 ]
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -155,10 +50,16 @@ function SectionCard({ title, children, badge }) {
 
 export default function RolePermissions() {
   const queryClient = useQueryClient()
-  const { refreshPermissions, user } = useAuthStore()
+  const { refreshPermissions, user, tenant } = useAuthStore()
   const [activeRole, setActiveRole] = useState('owner')
   const [draft, setDraft] = useState(null)
   const [dirty, setDirty] = useState(false)
+
+  const bizConfig = BUSINESS_CONFIG[tenant?.business_type] || {}
+  const PAGES = bizConfig.rolePages || []
+  const ACTION_GROUPS = bizConfig.actionGroups || []
+  const APPROVAL_OPTIONS = bizConfig.approvalOptions || []
+  const CONFIGURABLE_ROLES = bizConfig.roles || []
 
   const activeRoleMeta = CONFIGURABLE_ROLES.find(r => r.key === activeRole)
   const isLocked = !!activeRoleMeta?.locked
@@ -230,6 +131,9 @@ export default function RolePermissions() {
   }
 
   const isWildcard = draft.pages?.includes('*')
+  const allActionKeys = ACTION_GROUPS.flatMap(g => g.actions.map(a => a.key))
+  const enabledPageCount = (draft.pages || []).filter(p => PAGES.some(pg => pg.key === p)).length
+  const enabledActionCount = (draft.actions || []).filter(a => allActionKeys.includes(a)).length
 
   return (
     <div className="p-4 md:p-6">
@@ -301,7 +205,7 @@ export default function RolePermissions() {
         {/* Pages / Tabs */}
         <SectionCard
           title="Pages & Sidebar Tabs"
-          badge={isWildcard ? 'All pages' : `${(draft.pages || []).length} of ${PAGES.length} enabled`}
+          badge={isWildcard ? 'All pages' : `${enabledPageCount} of ${PAGES.length} enabled`}
         >
           {isWildcard ? (
             <p className="text-sm text-gray-500 italic">Full access — all pages are visible</p>
@@ -387,7 +291,7 @@ export default function RolePermissions() {
         <div className="lg:col-span-2">
           <SectionCard
             title="Actions & Capabilities"
-            badge={isWildcard ? 'All actions' : `${(draft.actions || []).length} actions allowed`}
+            badge={isWildcard ? 'All actions' : `${enabledActionCount} of ${allActionKeys.length} actions allowed`}
           >
             {isWildcard ? (
               <p className="text-sm text-gray-500 italic">Full access — all actions are permitted</p>

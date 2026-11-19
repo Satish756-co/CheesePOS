@@ -38,7 +38,8 @@ ROLE_DEFAULT_CONFIGS = {
     },
     'admin': {
         'pages': ['dashboard', 'billing', 'table_billing', 'orders', 'tables', 'sales_log',
-                  'kot', 'products', 'inventory', 'purchases', 'expenses', 'reports', 'users', 'roles', 'outlets'],
+                  'kot', 'products', 'inventory', 'purchases', 'expenses', 'reports', 'users', 'roles', 'outlets',
+                  'salon_billing', 'salon_bills_log', 'salon_services', 'salon_coupons', 'salon_summary'],
         'actions': ['billing.view', 'billing.create', 'billing.cancel', 'billing.cancel_own', 'billing.discount',
                     'orders.view', 'orders.create', 'orders.edit', 'orders.cancel',
                     'tables.view', 'tables.update',
@@ -53,7 +54,8 @@ ROLE_DEFAULT_CONFIGS = {
     },
     'manager': {
         'pages': ['dashboard', 'billing', 'table_billing', 'orders', 'tables', 'sales_log',
-                  'kot', 'inventory', 'expenses', 'reports'],
+                  'kot', 'inventory', 'expenses', 'reports',
+                  'salon_billing', 'salon_bills_log', 'salon_services', 'salon_summary'],
         'actions': ['billing.view', 'billing.create', 'billing.cancel', 'billing.cancel_own', 'billing.discount',
                     'orders.view', 'orders.create', 'orders.edit', 'orders.cancel',
                     'tables.view', 'tables.update',
@@ -64,13 +66,13 @@ ROLE_DEFAULT_CONFIGS = {
         'data_scope': 'all',
     },
     'cashier': {
-        'pages': ['dashboard', 'billing', 'table_billing', 'sales_log'],
+        'pages': ['dashboard', 'billing', 'table_billing', 'sales_log', 'salon_billing', 'salon_bills_log'],
         'actions': ['billing.view', 'billing.create', 'billing.cancel_own'],
         'approvals': ['billing.cancel'],
         'data_scope': 'all',
     },
     'waiter': {
-        'pages': ['dashboard', 'table_billing', 'orders', 'tables'],
+        'pages': ['dashboard', 'table_billing', 'orders', 'tables', 'salon_billing'],
         'actions': ['orders.view', 'orders.create', 'orders.edit',
                     'tables.view', 'tables.update', 'billing.view', 'billing.create'],
         'approvals': ['billing.cancel', 'orders.cancel'],
@@ -83,14 +85,14 @@ ROLE_DEFAULT_CONFIGS = {
         'data_scope': 'all',
     },
     'inventory_manager': {
-        'pages': ['dashboard', 'products', 'inventory', 'purchases'],
+        'pages': ['dashboard', 'products', 'inventory', 'purchases', 'salon_services'],
         'actions': ['inventory.view', 'inventory.adjust',
                     'purchases.view', 'purchases.create', 'purchases.receive'],
         'approvals': ['purchases.approve'],
         'data_scope': 'outlet',
     },
     'accountant': {
-        'pages': ['dashboard', 'expenses', 'reports', 'sales_log'],
+        'pages': ['dashboard', 'expenses', 'reports', 'sales_log', 'salon_bills_log'],
         'actions': ['reports.view', 'reports.export', 'expenses.view', 'billing.view'],
         'approvals': [],
         'data_scope': 'all',
@@ -98,17 +100,26 @@ ROLE_DEFAULT_CONFIGS = {
 }
 
 
-def get_role_config(tenant_id, role):
-    """Return effective permission config for a role: DB override if set, else defaults."""
+def get_role_config(tenant_id, role, feature_overrides=None):
+    """Return effective permission config for a role: DB override if set, else defaults.
+    feature_overrides: dict of {page: False} set by super admin to disable features tenant-wide.
+    """
     if role in ('owner', 'super_admin'):
-        return {'pages': ['*'], 'actions': ['*'], 'approvals': [], 'data_scope': 'all'}
-    config = TenantRoleConfig.query.filter_by(tenant_id=tenant_id, role=role).first()
-    if config:
-        return {'pages': config.pages, 'actions': config.actions,
-                'approvals': config.approvals, 'data_scope': config.data_scope}
-    return ROLE_DEFAULT_CONFIGS.get(
-        role, {'pages': [], 'actions': [], 'approvals': [], 'data_scope': 'all'}
-    )
+        config = {'pages': ['*'], 'actions': ['*'], 'approvals': [], 'data_scope': 'all'}
+    else:
+        db_config = TenantRoleConfig.query.filter_by(tenant_id=tenant_id, role=role).first()
+        if db_config:
+            config = {'pages': db_config.pages, 'actions': db_config.actions,
+                      'approvals': db_config.approvals, 'data_scope': db_config.data_scope}
+        else:
+            config = ROLE_DEFAULT_CONFIGS.get(
+                role, {'pages': [], 'actions': [], 'approvals': [], 'data_scope': 'all'}
+            )
+
+    # Attach disabled_features so the frontend can block them even for owner/admin
+    disabled = [k for k, v in (feature_overrides or {}).items() if v is False]
+    config['disabled_features'] = disabled
+    return config
 
 
 class TenantRoleConfig(db.Model, TimestampMixin):
@@ -162,7 +173,11 @@ class User(db.Model, TimestampMixin):
     two_factor_secret = db.Column(db.String(100))
     token_version  = db.Column(db.Integer, nullable=False, default=0)
     must_change_password = db.Column(db.Boolean, nullable=False, default=False)
+    terms_accepted_at    = db.Column(db.DateTime, nullable=True)
     reset_batch_id = db.Column(db.Integer, db.ForeignKey('data_reset_batches.id'), nullable=True, index=True)
+    __table_args__ = (
+        db.Index('ix_users_tenant', 'tenant_id'),
+    )
 
     tenant = db.relationship('Tenant', back_populates='users')
     outlet_assignments = db.relationship('UserOutlet', back_populates='user', lazy='dynamic')
@@ -211,6 +226,7 @@ class User(db.Model, TimestampMixin):
             'profile_photo': self.profile_photo,
             'last_login_at': self.last_login_at.isoformat() if self.last_login_at else None,
             'must_change_password': self.must_change_password,
+            'terms_accepted_at': self.terms_accepted_at.isoformat() if self.terms_accepted_at else None,
             'created_at': self.created_at.isoformat(),
             'outlet_ids': [ua.outlet_id for ua in self.outlet_assignments.filter_by(is_active=True).all()],
         }
@@ -227,6 +243,23 @@ class UserOutlet(db.Model, TimestampMixin):
 
     user = db.relationship('User', back_populates='outlet_assignments')
     outlet = db.relationship('Outlet', back_populates='user_assignments')
+
+
+class UserTenantAccess(db.Model):
+    """Links a user (owner) to multiple tenants for multi-business support."""
+    __tablename__ = 'user_tenant_access'
+
+    id        = db.Column(db.Integer, primary_key=True)
+    user_id   = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=False)
+    role      = db.Column(db.String(30), default='owner')
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'tenant_id', name='uq_user_tenant'),)
+
+    user   = db.relationship('User', backref=db.backref('tenant_accesses', lazy='dynamic'))
+    tenant = db.relationship('Tenant', backref=db.backref('user_accesses', lazy='dynamic'))
 
 
 class AuditLog(db.Model):

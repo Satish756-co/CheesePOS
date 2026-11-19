@@ -131,11 +131,18 @@ def get_top_products():
     tenant_id = claims.get('tenant_id')
     outlet_id = request.args.get('outlet_id', type=int)
     limit = request.args.get('limit', 10, type=int)
-    days = request.args.get('days', 30, type=int)
+    date_from = request.args.get('date_from')
+    date_to   = request.args.get('date_to')
+
+    if date_from and date_to:
+        start = parse_ist_date(date_from)
+        end   = parse_ist_date_end(date_to)
+    else:
+        days  = request.args.get('days', 30, type=int)
+        start = datetime.utcnow() - timedelta(days=days) + IST_OFFSET
+        end   = None
 
     from app.models.billing import InvoiceItem
-    start = datetime.utcnow() - timedelta(days=days) + IST_OFFSET
-
     q = db.session.query(
         InvoiceItem.product_name,
         func.sum(InvoiceItem.quantity).label('qty'),
@@ -146,6 +153,8 @@ def get_top_products():
         Invoice.created_at >= start,
         Invoice.reset_batch_id.is_(None),
     )
+    if end:
+        q = q.filter(Invoice.created_at < end)
     if outlet_id:
         q = q.filter(Invoice.outlet_id == outlet_id)
 
@@ -166,10 +175,24 @@ def get_top_products():
 def get_outlet_comparison():
     claims = get_jwt()
     tenant_id = claims.get('tenant_id')
-    days = request.args.get('days', 30, type=int)
-    start = datetime.utcnow() - timedelta(days=days) + IST_OFFSET
+    date_from = request.args.get('date_from')
+    date_to   = request.args.get('date_to')
 
-    results = db.session.query(
+    from datetime import date as date_type
+    if date_from and date_to:
+        inv_start = parse_ist_date(date_from)
+        inv_end   = parse_ist_date_end(date_to)
+        exp_from  = date_type.fromisoformat(date_from)
+        exp_to    = date_type.fromisoformat(date_to)
+    else:
+        days      = request.args.get('days', 30, type=int)
+        inv_start = datetime.utcnow() - timedelta(days=days) + IST_OFFSET
+        inv_end   = None
+        today     = (datetime.utcnow() + IST_OFFSET).date()
+        exp_to    = today
+        exp_from  = today - timedelta(days=days)
+
+    inv_q = db.session.query(
         Invoice.outlet_id,
         Outlet.name.label('outlet_name'),
         func.sum(Invoice.total_amount).label('sales'),
@@ -177,16 +200,40 @@ def get_outlet_comparison():
     ).join(Outlet, Outlet.id == Invoice.outlet_id).filter(
         Invoice.tenant_id == tenant_id,
         Invoice.status != 'cancelled',
-        Invoice.created_at >= start,
+        Invoice.created_at >= inv_start,
         Invoice.reset_batch_id.is_(None),
-    ).group_by(Invoice.outlet_id, Outlet.name).all()
+    )
+    if inv_end:
+        inv_q = inv_q.filter(Invoice.created_at < inv_end)
+    sales_results = inv_q.group_by(Invoice.outlet_id, Outlet.name).all()
 
-    return jsonify([{
-        'outlet_id': r.outlet_id,
-        'outlet_name': r.outlet_name,
-        'sales': float(r.sales or 0),
-        'bills': r.bills,
-    } for r in results])
+    exp_results = db.session.query(
+        Expense.outlet_id,
+        func.sum(Expense.amount).label('expenses'),
+    ).filter(
+        Expense.tenant_id == tenant_id,
+        Expense.status == 'approved',
+        Expense.expense_date >= exp_from,
+        Expense.expense_date <= exp_to,
+        Expense.reset_batch_id.is_(None),
+    ).group_by(Expense.outlet_id).all()
+
+    expense_map = {r.outlet_id: float(r.expenses or 0) for r in exp_results}
+
+    rows = []
+    for r in sales_results:
+        sales    = float(r.sales or 0)
+        expenses = expense_map.get(r.outlet_id, 0.0)
+        rows.append({
+            'outlet_id':   r.outlet_id,
+            'outlet_name': r.outlet_name,
+            'sales':       sales,
+            'bills':       r.bills,
+            'expenses':    expenses,
+            'profit':      round(sales - expenses, 2),
+        })
+
+    return jsonify(rows)
 
 
 @dashboard_bp.route('/daily', methods=['GET'])

@@ -4,11 +4,13 @@ import { useAuthStore } from '@/store/authStore'
 import { authAPI } from '@/api'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import EnquiryModal from '@/components/EnquiryModal'
 
 export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [showContact, setShowContact] = useState(false)
   const { setAuth } = useAuthStore()
   const navigate = useNavigate()
 
@@ -17,8 +19,23 @@ export default function Login() {
     setLoading(true)
     try {
       const res = await authAPI.login(form.email, form.password)
-      const { user, tenant, access_token, refresh_token, effective_permissions } = res.data
-      setAuth(user, tenant, access_token, refresh_token, effective_permissions)
+      const data = res.data
+
+      if (data.requires_business_selection) {
+        // Multi-business — redirect to business picker
+        navigate('/select-business', {
+          state: {
+            selectionToken: data.selection_token,
+            businesses: data.businesses,
+            user: data.user,
+          },
+          replace: true,
+        })
+        return
+      }
+
+      const { user, tenant, access_token, refresh_token, effective_permissions, businesses } = data
+      setAuth(user, tenant, access_token, refresh_token, effective_permissions, businesses ?? [])
       toast.success(`Welcome back, ${user.first_name}!`)
       navigate(useAuthStore.getState().getHomeRoute(), { replace: true })
     } catch (err) {
@@ -87,10 +104,16 @@ export default function Login() {
 
       <p className="text-center text-sm text-gray-500 mt-6">
         Need an account?{' '}
-        <a href="mailto:cheesepossupport@gmail.com" className="text-brand-600 hover:text-brand-700 font-medium">
+        <button
+          type="button"
+          onClick={() => setShowContact(true)}
+          className="text-brand-600 hover:text-brand-700 font-medium"
+        >
           Contact us
-        </a>
+        </button>
       </p>
+
+      {showContact && <EnquiryModal onClose={() => setShowContact(false)} />}
     </div>
   )
 }

@@ -3,8 +3,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminAPI } from '@/api'
 import { formatCurrency, formatDate } from '@/utils/formatters'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Building2, Users, Store, CreditCard, X, Sliders, AlertTriangle, Clock, RotateCcw, Trash2 } from 'lucide-react'
+import { ArrowLeft, Building2, Users, Store, CreditCard, X, Sliders, AlertTriangle, Clock, RotateCcw, Trash2, KeyRound, Copy, ToggleLeft, ToggleRight } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { BUSINESS_CONFIG } from '@/config/businessConfig'
+
+const BUSINESS_TYPE_LABELS = {
+  bar_restaurant: 'Bar & Restaurant',
+  saloon:         'Saloon / Spa',
+  daily_store:    'Daily Store',
+  scanning_lab:   'Scanning Lab',
+  pharmacy:       'Pharmacy',
+  retail_shop:    'Retail Shop',
+  hr_operations:  'HR Operations',
+  other:          'Other',
+}
 
 function ActivateSubscriptionModal({ tenantId, plans, onClose, onSave }) {
   const [form, setForm] = useState({ plan_id: plans[0]?.id || '', billing_cycle: 'monthly' })
@@ -73,8 +85,34 @@ function ActivateSubscriptionModal({ tenantId, plans, onClose, onSave }) {
   )
 }
 
+function ResetPasswordResultModal({ result, onClose }) {
+  const copy = () => {
+    navigator.clipboard.writeText(result.temp_password)
+    toast.success('Copied to clipboard')
+  }
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl w-full max-w-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900">Password Reset</h3>
+          <button onClick={onClose}><X size={20} /></button>
+        </div>
+        <p className="text-sm text-gray-600 mb-1">Temporary password for <strong>{result.user_name}</strong></p>
+        <p className="text-xs text-gray-400 mb-4">{result.user_email}</p>
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-4">
+          <span className="font-mono text-lg font-bold text-gray-900 flex-1 tracking-wider">{result.temp_password}</span>
+          <button onClick={copy} className="text-gray-400 hover:text-brand-600"><Copy size={16} /></button>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 mb-5">
+          Share this password with the user. They will be forced to change it on next login.
+        </div>
+        <button onClick={onClose} className="btn-primary w-full">Done</button>
+      </div>
+    </div>
+  )
+}
+
 const OPTION_LABELS = {
-  invoices: 'Sales/Invoices', orders: 'Orders & KOTs', purchases: 'Purchases',
   inventory: 'Inventory', expenses: 'Expenses', staff_users: 'Staff Accounts',
 }
 
@@ -235,6 +273,81 @@ function AdminResetDataSection({ tenantId }) {
   )
 }
 
+function FeatureOverridesSection({ tenantId, currentOverrides, onSaved, businessType }) {
+  const qc = useQueryClient()
+  const [overrides, setOverrides] = useState(() => currentOverrides || {})
+
+  const featureList = BUSINESS_CONFIG[businessType]?.featureList || []
+
+  const isDisabled = (key) => overrides[key] === false
+
+  const toggle = (key) => {
+    setOverrides(prev => {
+      const next = { ...prev }
+      if (next[key] === false) {
+        delete next[key]  // remove override → enabled
+      } else {
+        next[key] = false  // set to false → disabled
+      }
+      return next
+    })
+  }
+
+  const save = useMutation({
+    mutationFn: () => adminAPI.updateFeatureOverrides(tenantId, overrides),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-tenant', String(tenantId)] })
+      toast.success('Feature settings saved')
+      onSaved?.()
+    },
+    onError: (err) => toast.error(err.response?.data?.error || 'Save failed'),
+  })
+
+  const hasChanges = JSON.stringify(overrides) !== JSON.stringify(currentOverrides || {})
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-5 md:col-span-2">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-bold text-gray-900 flex items-center gap-2">
+          <ToggleRight size={16} /> Feature Access
+        </h2>
+        <p className="text-xs text-gray-400">Toggle off to hide tab from this customer</p>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+        {featureList.map(({ key, label }) => {
+          const off = isDisabled(key)
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => toggle(key)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-colors
+                ${off
+                  ? 'bg-red-50 border-red-200 text-red-600'
+                  : 'bg-green-50 border-green-200 text-green-700'
+                }`}
+            >
+              {off
+                ? <ToggleLeft size={16} className="flex-shrink-0" />
+                : <ToggleRight size={16} className="flex-shrink-0" />}
+              {label}
+            </button>
+          )
+        })}
+      </div>
+      {hasChanges && (
+        <button
+          onClick={() => save.mutate()}
+          disabled={save.isPending}
+          className="btn-primary text-sm py-1.5 px-4"
+        >
+          {save.isPending ? 'Saving…' : 'Save Changes'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function AdminTenantDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -243,6 +356,7 @@ export default function AdminTenantDetail() {
   const [showSubModal, setShowSubModal] = useState(false)
   const [editingLimits, setEditingLimits] = useState(false)
   const [limitsForm, setLimitsForm] = useState({})
+  const [resetResult, setResetResult] = useState(null)
 
   const { data: tenant, isLoading } = useQuery({
     queryKey: ['admin-tenant', id],
@@ -266,6 +380,12 @@ export default function AdminTenantDetail() {
       toast.success('Subscription activated')
     },
     onError: (err) => toast.error(err.response?.data?.error || 'Failed'),
+  })
+
+  const resetPassword = useMutation({
+    mutationFn: (userId) => adminAPI.resetUserPassword(parseInt(id), userId),
+    onSuccess: (res) => setResetResult(res.data),
+    onError: (err) => toast.error(err.response?.data?.error || 'Reset failed'),
   })
 
   if (isLoading) return <div className="p-6 text-center text-gray-400">Loading...</div>
@@ -329,6 +449,7 @@ export default function AdminTenantDetail() {
             <div className="space-y-3 text-sm">
               {[
                 ['Business Name', tenant.business_name],
+                ['Business Type', tenant.business_type ? (BUSINESS_TYPE_LABELS[tenant.business_type] || tenant.business_type) : null],
                 ['Email', tenant.email],
                 ['Phone', tenant.phone],
                 ['City', tenant.city],
@@ -459,6 +580,12 @@ export default function AdminTenantDetail() {
             )}
           </div>
         </div>
+          <FeatureOverridesSection
+            tenantId={parseInt(id)}
+            currentOverrides={tenant.feature_overrides}
+            businessType={tenant.business_type}
+            onSaved={() => qc.invalidateQueries({ queryKey: ['admin-tenant', id] })}
+          />
         <AdminResetDataSection tenantId={parseInt(id)} />
         </>
       )}
@@ -503,6 +630,7 @@ export default function AdminTenantDetail() {
                 <th className="table-header">Role</th>
                 <th className="table-header">Status</th>
                 <th className="table-header">Joined</th>
+                <th className="table-header">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -513,6 +641,16 @@ export default function AdminTenantDetail() {
                   <td className="table-cell"><span className="badge badge-blue capitalize">{u.role}</span></td>
                   <td className="table-cell"><span className={`badge ${u.is_active ? 'badge-green' : 'badge-red'}`}>{u.is_active ? 'Active' : 'Inactive'}</span></td>
                   <td className="table-cell text-sm text-gray-500">{formatDate(u.created_at)}</td>
+                  <td className="table-cell">
+                    <button
+                      onClick={() => { if (window.confirm(`Reset password for ${u.first_name} ${u.last_name}?`)) resetPassword.mutate(u.id) }}
+                      disabled={resetPassword.isPending}
+                      title="Reset password"
+                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 disabled:opacity-50"
+                    >
+                      <KeyRound size={13} /> Reset Password
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -552,6 +690,10 @@ export default function AdminTenantDetail() {
           onClose={() => setShowSubModal(false)}
           onSave={activateSub.mutateAsync}
         />
+      )}
+
+      {resetResult && (
+        <ResetPasswordResultModal result={resetResult} onClose={() => setResetResult(null)} />
       )}
     </div>
   )

@@ -237,10 +237,21 @@ class Expense(db.Model, TimestampMixin):
     receipt_url = db.Column(db.String(500))
     recorded_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     approved_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    staff_id    = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # for salary expenses
     status         = db.Column(db.String(20), default='approved')  # pending, approved, rejected
     reset_batch_id = db.Column(db.Integer, db.ForeignKey('data_reset_batches.id'), nullable=True, index=True)
+    __table_args__ = (
+        db.Index('ix_expenses_tenant_date', 'tenant_id', 'expense_date'),
+        db.Index('ix_expenses_outlet', 'outlet_id'),
+        db.Index('ix_expenses_staff', 'staff_id'),
+    )
 
     def to_dict(self):
+        from app.models.user import User
+        staff_name = None
+        if self.staff_id:
+            staff = User.query.get(self.staff_id)
+            staff_name = staff.full_name if staff else None
         return {
             'id': self.id,
             'expense_date': self.expense_date.isoformat(),
@@ -249,5 +260,8 @@ class Expense(db.Model, TimestampMixin):
             'amount': float(self.amount),
             'payment_mode': self.payment_mode,
             'status': self.status,
+            'staff_id': self.staff_id,
+            'staff_name': staff_name,
+            'outlet_id': self.outlet_id,
             'created_at': self.created_at.isoformat(),
         }

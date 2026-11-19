@@ -59,6 +59,7 @@ class Tenant(db.Model, TimestampMixin):
     notes = db.Column(db.Text)
     custom_max_outlets = db.Column(db.Integer, nullable=True)
     custom_max_users = db.Column(db.Integer, nullable=True)
+    feature_overrides = db.Column(db.JSON, default=dict)  # {'billing': False, 'table_billing': False, ...}
     # Soft-deletion cooling period
     deletion_status = db.Column(db.String(20), nullable=True)   # pending_deletion | purged
     deleted_at = db.Column(db.DateTime, nullable=True)
@@ -87,6 +88,7 @@ class Tenant(db.Model, TimestampMixin):
             'created_at': self.created_at.isoformat(),
             'custom_max_outlets': self.custom_max_outlets,
             'custom_max_users': self.custom_max_users,
+            'feature_overrides': self.feature_overrides or {},
             'deletion_status': self.deletion_status,
             'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
             'deletion_expires_at': self.deletion_expires_at.isoformat() if self.deletion_expires_at else None,

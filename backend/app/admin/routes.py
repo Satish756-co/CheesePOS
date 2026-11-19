@@ -10,10 +10,10 @@ import html as html_mod
 from app.extensions import db, mail, limiter
 from app.models import (
     Tenant, Plan, TenantSubscription, SubscriptionPayment,
-    User, UserOutlet, Outlet, Invoice, SupportTicket, PlatformSetting,
+    User, UserOutlet, UserTenantAccess, Outlet, Invoice, SupportTicket, PlatformSetting,
     DataResetBatch, Order, OrderItem, KOT, KOTItem, InvoiceItem, BillPayment,
     Purchase, PurchaseItem, InventoryLedger, StockBalance, StockTransfer, StockTransferItem,
-    Expense, AuditLog,
+    Expense, AuditLog, OnboardingRequest,
 )
 from app.auth.decorators import super_admin_required
 
@@ -78,6 +78,7 @@ def admin_dashboard():
 def list_tenants():
     status = request.args.get('status')
     search = request.args.get('search', '')
+    business_type = request.args.get('business_type', '')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
 
@@ -104,6 +105,9 @@ def list_tenants():
             Tenant.email.ilike(f'%{search}%'),
             Tenant.city.ilike(f'%{search}%'),
         ))
+
+    if business_type:
+        q = q.filter_by(business_type=business_type)
 
     pagination = q.order_by(Tenant.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     return jsonify({
@@ -520,36 +524,228 @@ def _send_async(app, msg):
             app.logger.error(f'Admin welcome email failed: {e}')
 
 
-def _send_welcome_email(app, email, business_name, owner_name, temp_password):
+def _send_new_business_email(app, email, business_name, owner_name):
     msg = Message(
-        subject=f'Welcome to CheesePOS — Your account is ready',
+        subject=f'New business added to your CheesePOS account — {business_name}',
         recipients=[email],
         html=f"""
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
           <div style="background:#1e293b;color:#fff;padding:20px 24px;border-radius:8px;margin-bottom:24px">
-            <h2 style="margin:0;font-size:22px">Welcome to CheesePOS!</h2>
-            <p style="margin:6px 0 0;font-size:13px;color:#94a3b8">Your account has been created.</p>
+            <h2 style="margin:0;font-size:22px">New Business Added!</h2>
+            <p style="margin:6px 0 0;font-size:13px;color:#94a3b8">Your account now has access to a new business.</p>
           </div>
           <p style="color:#374151;font-size:15px">Hi <strong>{html_mod.escape(owner_name)}</strong>,</p>
-          <p style="color:#6b7280;font-size:14px">Your CheesePOS account for <strong>{html_mod.escape(business_name)}</strong> is ready. Use the credentials below to log in.</p>
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin:20px 0">
-            <table style="width:100%;font-size:14px">
-              <tr>
-                <td style="color:#6b7280;padding:6px 0;width:130px">Login Email</td>
-                <td style="color:#1e293b;font-weight:bold">{html_mod.escape(email)}</td>
-              </tr>
-              <tr>
-                <td style="color:#6b7280;padding:6px 0">Temporary Password</td>
-                <td style="color:#1e293b;font-weight:bold;font-family:monospace;font-size:16px;letter-spacing:0.05em">{html_mod.escape(temp_password)}</td>
-              </tr>
-            </table>
+          <p style="color:#6b7280;font-size:14px">
+            Your CheesePOS account has been given access to a new business:
+            <strong style="color:#111827">{html_mod.escape(business_name)}</strong>.
+          </p>
+          <p style="color:#6b7280;font-size:14px">
+            Log in with your existing credentials. After signing in, you'll be able to select which business to manage.
+          </p>
+          <div style="background:#eff6ff;border-radius:8px;padding:14px 18px;margin:20px 0;font-size:13px;color:#1d4ed8">
+            Use the same email and password you already use to log in.
           </div>
-          <div style="background:#fef3c7;border-radius:8px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#92400e">
-            <strong>Important:</strong> You will be asked to set a new password on your first login. Please do so immediately for security.
-          </div>
-          <p style="color:#6b7280;font-size:13px;margin-top:24px">If you need help, contact us at <a href="mailto:cheesepossupport@gmail.com" style="color:#3b82f6">cheesepossupport@gmail.com</a></p>
+          <p style="color:#6b7280;font-size:13px;margin-top:24px">
+            If you didn't expect this, contact us at <a href="mailto:cheesepossupport@gmail.com" style="color:#3b82f6">cheesepossupport@gmail.com</a>
+          </p>
         </div>
         """,
+    )
+    thread = threading.Thread(target=_send_async, args=(app, msg))
+    thread.daemon = True
+    thread.start()
+
+
+def _send_welcome_email(app, email, business_name, owner_name, temp_password, business_type='bar_restaurant'):
+    frontend_url = app.config.get('FRONTEND_URL', 'http://localhost:5173')
+    login_url = frontend_url.rstrip('/') + '/login'
+
+    # ── Business-type steps ──────────────────────────────────────────────────
+    if business_type == 'saloon':
+        steps_rows = [
+            ('✂️', 'Set up your services',
+             'Go to <strong>Services</strong> → add service categories, services with pricing, duration, and commission.'),
+            ('💅', 'Create packages & coupons',
+             'Bundle services into combo packages. Add discount coupons for promotions and loyal customers.'),
+            ('💰', 'Create your first bill',
+             'Open <strong>Billing</strong>, pick a customer, select services or packages, apply a coupon if needed, and collect payment.'),
+            ('📊', 'Track revenue & performance',
+             'The <strong>Dashboard</strong> shows daily revenue, top services, and staff performance. <strong>Bills Log</strong> lists every transaction.'),
+        ]
+    else:
+        steps_rows = [
+            ('🏪', 'Set up your space',
+             'Go to <strong>Settings → Outlets</strong> to add your outlet details, then configure tables under <strong>Tables</strong>.'),
+            ('🍽️', 'Build your menu',
+             'Add product categories and items in <strong>Products</strong>. Set prices, variants (e.g. 500 ml / 750 ml), and tax rates.'),
+            ('📋', 'Start taking orders',
+             'Use <strong>Table Billing</strong> for dine-in orders or <strong>Counter Billing</strong> for quick counter sales.'),
+            ('📊', 'Track your business',
+             'View daily summaries in <strong>Dashboard</strong>, monitor stock in <strong>Inventory</strong>, and export reports anytime.'),
+        ]
+
+    steps_html = ''.join(f"""
+      <tr>
+        <td style="padding:16px 0;vertical-align:top;border-bottom:1px solid #f3f4f6;">
+          <table style="border-collapse:collapse;width:100%"><tr>
+            <td style="width:44px;vertical-align:top;padding-right:12px;">
+              <div style="width:40px;height:40px;border-radius:50%;background:#fff7ed;display:flex;align-items:center;justify-content:center;font-size:20px;text-align:center;line-height:40px;">
+                {icon}
+              </div>
+            </td>
+            <td style="vertical-align:top;">
+              <p style="margin:0 0 4px;font-size:15px;font-weight:bold;color:#111827;">Step {i}. {title}</p>
+              <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;">{desc}</p>
+            </td>
+          </tr></table>
+        </td>
+      </tr>""" for i, (icon, title, desc) in enumerate(steps_rows, 1))
+
+    biz_label = 'Saloon' if business_type == 'saloon' else 'Bar &amp; Restaurant'
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Welcome to CheesePOS</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;">
+<style>
+  @keyframes flapOpen {{
+    0%   {{ transform: perspective(600px) rotateX(0deg); opacity:1; }}
+    45%  {{ transform: perspective(600px) rotateX(-170deg); opacity:0.9; }}
+    100% {{ transform: perspective(600px) rotateX(-180deg); opacity:0; visibility:hidden; }}
+  }}
+  @keyframes letterRise {{
+    0%   {{ opacity:0; transform:translateY(40px); }}
+    100% {{ opacity:1; transform:translateY(0); }}
+  }}
+  @keyframes fadeIn {{
+    from {{ opacity:0; }} to {{ opacity:1; }}
+  }}
+  .env-flap     {{ transform-origin: top center; animation: flapOpen 1.4s cubic-bezier(.4,0,.2,1) 0.6s both; backface-visibility:hidden; }}
+  .letter-body  {{ animation: letterRise 0.9s ease-out 1.5s both; }}
+  .footer-block {{ animation: fadeIn 0.8s ease-out 2.2s both; }}
+</style>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+  <!-- ═══ ENVELOPE WRAPPER ═══ -->
+  <tr><td style="position:relative;">
+    <div style="position:relative;overflow:hidden;">
+
+      <!-- Envelope body (orange background) -->
+      <div style="background:linear-gradient(145deg,#f97316 0%,#ea580c 100%);min-height:280px;position:relative;text-align:center;padding-bottom:40px;">
+
+        <!-- Bottom-left fold line -->
+        <div style="position:absolute;bottom:0;left:0;width:0;height:0;border-bottom:80px solid #c2410c;border-right:300px solid transparent;"></div>
+        <!-- Bottom-right fold line -->
+        <div style="position:absolute;bottom:0;right:0;width:0;height:0;border-bottom:80px solid #c2410c;border-left:300px solid transparent;"></div>
+
+        <!-- Main envelope text (always visible) -->
+        <div style="position:relative;z-index:2;padding:48px 40px 24px;">
+          <p style="margin:0 0 4px;font-size:12px;font-weight:bold;letter-spacing:3px;color:rgba(255,255,255,0.75);text-transform:uppercase;">CheesePOS</p>
+          <h1 style="margin:0;font-size:58px;font-weight:900;color:#fff;line-height:1;font-family:Georgia,'Times New Roman',serif;text-shadow:0 3px 12px rgba(0,0,0,0.25);">welcome</h1>
+          <h2 style="margin:0;font-size:46px;font-weight:700;font-style:italic;color:rgba(255,255,255,0.95);font-family:Georgia,'Times New Roman',serif;text-shadow:0 2px 8px rgba(0,0,0,0.2);">on board.</h2>
+          <p style="margin:16px 0 0;font-size:14px;color:rgba(255,255,255,0.85);letter-spacing:0.5px;">
+            Your <strong style="color:#fff;">{html_mod.escape(business_name)}</strong> account is activated ✨
+          </p>
+        </div>
+
+        <!-- Animated flap (top triangle) — folds open on load -->
+        <div class="env-flap" style="position:absolute;top:0;left:0;right:0;z-index:3;">
+          <div style="width:0;height:0;border-left:300px solid transparent;border-right:300px solid transparent;border-top:160px solid #fb923c;margin:0 auto;"></div>
+          <!-- Pink seal line (decorative) -->
+          <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:2px;height:160px;background:linear-gradient(to bottom,rgba(236,72,153,0.7),transparent);"></div>
+        </div>
+
+      </div>
+    </div>
+  </td></tr>
+
+  <!-- ═══ LETTER CONTENT ═══ -->
+  <tr><td>
+    <div class="letter-body" style="background:#fff;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;padding:40px;">
+
+      <p style="margin:0 0 8px;font-size:18px;color:#111827;">
+        Hi <strong>{html_mod.escape(owner_name)}</strong> 👋
+      </p>
+      <p style="margin:0 0 28px;font-size:14px;color:#6b7280;line-height:1.6;">
+        Your <strong style="color:#374151;">{html_mod.escape(business_name)}</strong> ({biz_label}) account is now live.
+        Below are your login credentials — keep them safe.
+      </p>
+
+      <!-- Credentials card -->
+      <div style="background:#fafafa;border:2px solid #fed7aa;border-radius:12px;padding:24px;margin-bottom:24px;">
+        <p style="margin:0 0 16px;font-size:11px;font-weight:bold;color:#ea580c;letter-spacing:2px;text-transform:uppercase;">Your Login Details</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
+          <tr>
+            <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;width:150px;">📧 Email</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#111827;font-weight:bold;">{html_mod.escape(email)}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;">🔑 Temp Password</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#111827;font-weight:bold;font-family:monospace;font-size:20px;letter-spacing:3px;">{html_mod.escape(temp_password)}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 0;color:#6b7280;">🔗 App URL</td>
+            <td style="padding:10px 0;">
+              <a href="{login_url}" style="color:#ea580c;font-weight:bold;font-size:14px;text-decoration:none;">{login_url}</a>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- CTA button -->
+      <div style="text-align:center;margin-bottom:28px;">
+        <a href="{login_url}"
+           style="display:inline-block;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;padding:15px 44px;border-radius:50px;font-size:16px;font-weight:bold;text-decoration:none;letter-spacing:0.5px;box-shadow:0 4px 16px rgba(249,115,22,0.45);">
+          Open CheesePOS &rarr;
+        </a>
+      </div>
+
+      <!-- First-login notice -->
+      <div style="background:#fff7ed;border-left:4px solid #f97316;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:36px;font-size:13px;color:#9a3412;line-height:1.5;">
+        <strong>🔐 First login:</strong> You will be prompted to set a new password immediately.
+        Please choose a strong password and keep it private.
+      </div>
+
+      <!-- Getting started -->
+      <p style="margin:0 0 16px;font-size:16px;font-weight:bold;color:#111827;">Getting started</p>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        {steps_html}
+      </table>
+
+    </div>
+  </td></tr>
+
+  <!-- ═══ FOOTER ═══ -->
+  <tr><td>
+    <div class="footer-block" style="background:#1e293b;border-radius:0 0 12px 12px;padding:28px 40px;text-align:center;">
+      <p style="margin:0 0 8px;color:#fff;font-weight:bold;font-size:15px;">CheesePOS</p>
+      <p style="margin:0 0 12px;font-size:12px;color:#94a3b8;">
+        Questions? Contact us at
+        <a href="mailto:cheesepossupport@gmail.com" style="color:#fb923c;text-decoration:none;">cheesepossupport@gmail.com</a>
+      </p>
+      <p style="margin:0;font-size:11px;color:#475569;">
+        You received this email because an account was created for {html_mod.escape(email)}.
+      </p>
+    </div>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>"""
+
+    msg = Message(
+        subject=f'Welcome to CheesePOS — {html_mod.escape(business_name)} is ready!',
+        recipients=[email],
+        html=html_content,
     )
     thread = threading.Thread(target=_send_async, args=(app, msg))
     thread.daemon = True
@@ -664,8 +860,14 @@ def create_tenant():
     db.session.add(outlet)
     db.session.commit()
 
+    # Seed junction table so multi-business works from the start
+    access = UserTenantAccess(user_id=owner.id, tenant_id=tenant.id, role='owner')
+    db.session.add(access)
+    db.session.commit()
+
     app = current_app._get_current_object()
-    _send_welcome_email(app, email, tenant.business_name, owner.full_name, temp_password)
+    _send_welcome_email(app, email, tenant.business_name, owner.full_name, temp_password,
+                        business_type=data.get('business_type', 'bar_restaurant'))
 
     return jsonify(tenant.to_dict(include_subscription=True)), 201
 
@@ -688,6 +890,57 @@ def delete_tenant(tenant_id):
     return jsonify(tenant.to_dict())
 
 
+# ─── Admin: per-tenant feature overrides ─────────────────────────────────────
+
+ALLOWED_FEATURE_KEYS = [
+    'billing', 'table_billing', 'tables', 'orders', 'sales_log', 'kot',
+    'products', 'inventory', 'purchases', 'expenses', 'reports',
+    'users', 'roles', 'outlets', 'dashboard', 'support',
+]
+
+@admin_bp.route('/tenants/<int:tenant_id>/feature-overrides', methods=['PUT'])
+@jwt_required()
+@super_admin_required
+def update_feature_overrides(tenant_id):
+    tenant = Tenant.query.get_or_404(tenant_id)
+    data = request.get_json() or {}
+
+    overrides = {}
+    for key in ALLOWED_FEATURE_KEYS:
+        if key in data:
+            val = data[key]
+            if val is False:
+                overrides[key] = False   # explicitly disabled
+            # True or None = remove override (use plan/role default)
+
+    tenant.feature_overrides = overrides
+    db.session.commit()
+    return jsonify({'feature_overrides': tenant.feature_overrides})
+
+
+# ─── Admin: reset a user's password ─────────────────────────────────────────
+
+@admin_bp.route('/tenants/<int:tenant_id>/users/<int:user_id>/reset-password', methods=['POST'])
+@jwt_required()
+@super_admin_required
+def admin_reset_user_password(tenant_id, user_id):
+    user = User.query.filter_by(id=user_id, tenant_id=tenant_id).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    temp_password = _gen_temp_password()
+    user.set_password(temp_password)
+    user.must_change_password = True
+    db.session.commit()
+
+    return jsonify({
+        'message': f'Password reset for {user.email}',
+        'temp_password': temp_password,
+        'user_email': user.email,
+        'user_name': user.full_name,
+    })
+
+
 # ─── Reactivate tenant during cooling period ─────────────────────────────────
 
 @admin_bp.route('/tenants/<int:tenant_id>/reactivate', methods=['POST'])
@@ -704,3 +957,186 @@ def reactivate_tenant(tenant_id):
     tenant.status = 'trial'  # restore to trial; admin can activate manually
     db.session.commit()
     return jsonify(tenant.to_dict())
+
+
+# ─── Onboarding Requests ──────────────────────────────────────────────────────
+
+@admin_bp.route('/onboarding-requests', methods=['GET'])
+@jwt_required()
+@super_admin_required
+def list_onboarding_requests():
+    status = request.args.get('status')
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+
+    q = OnboardingRequest.query
+    if status:
+        q = q.filter_by(status=status)
+
+    pagination = q.order_by(OnboardingRequest.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    pending_count = OnboardingRequest.query.filter_by(status='pending').count()
+
+    return jsonify({
+        'requests': [r.to_dict() for r in pagination.items],
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'pending_count': pending_count,
+    })
+
+
+@admin_bp.route('/onboarding-requests/<int:req_id>/approve', methods=['POST'])
+@jwt_required()
+@super_admin_required
+def approve_onboarding_request(req_id):
+    orq = OnboardingRequest.query.get_or_404(req_id)
+    if orq.status != 'pending':
+        return jsonify({'error': f'Request is already {orq.status}'}), 400
+
+    admin_user_id = int(get_jwt_identity())
+    data = request.get_json() or {}
+
+    # Use submitted info or allow admin to override
+    business_name = data.get('business_name', orq.business_name).strip()
+    email = data.get('email', orq.email).lower().strip()
+    owner_name = data.get('owner_name', orq.owner_name or '').strip()
+    phone = data.get('phone', orq.phone).strip()
+    city = data.get('city', '').strip()
+    state = data.get('state', '').strip()
+    business_type = data.get('business_type', orq.business_type or 'bar_restaurant').strip()
+
+    existing_user = User.query.filter_by(email=email).first()
+
+    # Only block if the email belongs to a tenant but no user account matches
+    # (data inconsistency guard). If existing_user is found, we link the new
+    # business to their account — the multi-business path.
+    if not existing_user:
+        existing_tenant_check = Tenant.query.filter_by(email=email).first()
+        if existing_tenant_check:
+            return jsonify({'error': 'This business email is already registered to another account'}), 400
+
+    # Split owner name into first/last
+    parts = owner_name.split(' ', 1)
+    first_name = parts[0] if parts else owner_name
+    last_name = parts[1] if len(parts) > 1 else ''
+
+    count = Tenant.query.count()
+    tenant_code = f"TEN-{str(count + 1).zfill(6)}"
+    trial_days = PlatformSetting.get_int('trial_days', 14)
+
+    tenant = Tenant(
+        tenant_code=tenant_code,
+        business_name=business_name,
+        owner_name=owner_name or (existing_user.full_name if existing_user else email),
+        email=email,
+        phone=phone,
+        city=city,
+        state=state,
+        business_type=business_type,
+        status='trial',
+        trial_ends_at=datetime.utcnow() + timedelta(days=trial_days),
+    )
+    db.session.add(tenant)
+    db.session.flush()
+
+    if existing_user:
+        # Reuse existing account — just link to new tenant
+        owner = existing_user
+        temp_password = None
+        access = UserTenantAccess(user_id=existing_user.id, tenant_id=tenant.id, role='owner')
+        db.session.add(access)
+    else:
+        # Brand-new user
+        temp_password = _gen_temp_password()
+        owner = User(
+            tenant_id=tenant.id,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            phone=phone,
+            role='owner',
+            is_active=True,
+            must_change_password=True,
+        )
+        owner.set_password(temp_password)
+        db.session.add(owner)
+        db.session.flush()
+        access = UserTenantAccess(user_id=owner.id, tenant_id=tenant.id, role='owner')
+        db.session.add(access)
+
+    outlet = Outlet(
+        tenant_id=tenant.id,
+        outlet_code=f"{tenant_code}-01",
+        name=business_name,
+        city=city,
+        state=state,
+        is_active=True,
+    )
+    db.session.add(outlet)
+
+    orq.status = 'approved'
+    orq.reviewed_at = datetime.utcnow()
+    orq.reviewed_by = admin_user_id
+    orq.tenant_id = tenant.id
+
+    db.session.commit()
+
+    app = current_app._get_current_object()
+    if existing_user:
+        _send_new_business_email(app, email, business_name, existing_user.full_name)
+    else:
+        _send_welcome_email(app, email, business_name, owner_name or email, temp_password,
+                            business_type=business_type)
+
+    linked = 'existing account' if existing_user else 'new account'
+    return jsonify({
+        'message': f'Approved — tenant created and linked to {linked}',
+        'tenant': tenant.to_dict(include_subscription=True),
+        'existing_user': existing_user is not None,
+    }), 201
+
+
+@admin_bp.route('/onboarding-requests/<int:req_id>/reject', methods=['POST'])
+@jwt_required()
+@super_admin_required
+def reject_onboarding_request(req_id):
+    orq = OnboardingRequest.query.get_or_404(req_id)
+    if orq.status != 'pending':
+        return jsonify({'error': f'Request is already {orq.status}'}), 400
+
+    admin_user_id = int(get_jwt_identity())
+    data = request.get_json() or {}
+    reason = data.get('reason', '').strip()
+
+    orq.status = 'rejected'
+    orq.rejection_reason = reason
+    orq.reviewed_at = datetime.utcnow()
+    orq.reviewed_by = admin_user_id
+
+    db.session.commit()
+
+    # Optionally notify applicant
+    if data.get('notify', True):
+        from app.models.onboarding import BUSINESS_TYPE_LABELS
+        btype_label = BUSINESS_TYPE_LABELS.get(orq.business_type, orq.business_type)
+        msg = Message(
+            subject='Update on your CheesePOS application',
+            recipients=[orq.email],
+            html=f"""
+            <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px">
+              <h2 style="color:#1e293b">Application Update</h2>
+              <p>Hi {html_mod.escape(orq.owner_name or orq.email)},</p>
+              <p>Thank you for your interest in CheesePOS for <strong>{html_mod.escape(orq.business_name)}</strong>.</p>
+              <p>Unfortunately, we are unable to proceed with your application at this time.</p>
+              {'<p><strong>Reason:</strong> ' + html_mod.escape(reason) + '</p>' if reason else ''}
+              <p>If you have questions, please contact us at <a href="mailto:cheesepossupport@gmail.com">cheesepossupport@gmail.com</a>.</p>
+            </div>
+            """,
+        )
+        app = current_app._get_current_object()
+        thread = threading.Thread(target=_send_async, args=(app, msg))
+        thread.daemon = True
+        thread.start()
+
+    return jsonify({'message': 'Request rejected', 'request': orq.to_dict()})

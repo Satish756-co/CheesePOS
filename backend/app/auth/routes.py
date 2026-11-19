@@ -11,8 +11,59 @@ from flask_jwt_extended import (
 from flask_mail import Message
 from app.extensions import db, limiter, mail
 from app.models import User, Tenant, AuditLog, get_role_config
+from app.models.user import UserTenantAccess
+from app.models.onboarding import BUSINESS_TYPE_LABELS
 
 auth_bp = Blueprint('auth', __name__)
+
+
+def _get_user_businesses(user):
+    """Return all tenant IDs this user can access."""
+    tenant_ids = set()
+    if user.tenant_id:
+        tenant_ids.add(user.tenant_id)
+    for a in UserTenantAccess.query.filter_by(user_id=user.id, is_active=True).all():
+        tenant_ids.add(a.tenant_id)
+    return list(tenant_ids)
+
+
+def _business_list(tenant_ids):
+    tenants = Tenant.query.filter(Tenant.id.in_(tenant_ids)).all()
+    return [
+        {
+            'id': t.id,
+            'business_name': t.business_name,
+            'business_type': t.business_type,
+            'business_type_label': BUSINESS_TYPE_LABELS.get(t.business_type, t.business_type),
+            'status': t.status,
+            'city': t.city,
+        }
+        for t in tenants
+    ]
+
+
+def _build_login_response(user, tenant_id):
+    additional_claims = {
+        'tenant_id': tenant_id,
+        'role': user.role,
+        'is_super_admin': user.is_super_admin,
+        'tv': user.token_version,
+    }
+    access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
+    refresh_token = create_refresh_token(identity=str(user.id), additional_claims={'tv': user.token_version})
+    tenant = Tenant.query.get(tenant_id) if tenant_id else None
+    businesses = _business_list(_get_user_businesses(user))
+    return {
+        'access_token': access_token,
+        'refresh_token': refresh_token,
+        'user': user.to_dict(),
+        'tenant': tenant.to_dict(include_subscription=True) if tenant else None,
+        'effective_permissions': get_role_config(
+            tenant_id, user.role,
+            tenant.feature_overrides if tenant else None
+        ) if tenant_id else None,
+        'businesses': businesses,
+    }
 
 
 def log_audit(user_id, action, tenant_id=None, resource_type=None, resource_id=None, old=None, new=None):
@@ -67,6 +118,31 @@ def login():
     user.last_login_at = datetime.utcnow()
     db.session.commit()
 
+    # Multi-business: check if user has access to more than one tenant
+    if not user.is_super_admin:
+        tenant_ids = _get_user_businesses(user)
+        if len(tenant_ids) > 1:
+            # Issue a short-lived selection token — no tenant context yet
+            selection_token = create_access_token(
+                identity=str(user.id),
+                additional_claims={
+                    'token_type': 'business_selection',
+                    'tv': user.token_version,
+                    'is_super_admin': False,
+                    'tenant_id': None,
+                    'role': user.role,
+                },
+                expires_delta=timedelta(minutes=10),
+            )
+            log_audit(user.id, 'user.login_multi_business', tenant_id=user.tenant_id)
+            db.session.commit()
+            return jsonify({
+                'requires_business_selection': True,
+                'selection_token': selection_token,
+                'user': user.to_dict(),
+                'businesses': _business_list(tenant_ids),
+            }), 200
+
     additional_claims = {
         'tenant_id': user.tenant_id,
         'role': user.role,
@@ -75,7 +151,7 @@ def login():
     }
 
     access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
-    refresh_token = create_refresh_token(identity=str(user.id))
+    refresh_token = create_refresh_token(identity=str(user.id), additional_claims={'tv': user.token_version})
 
     log_audit(user.id, 'user.login', tenant_id=user.tenant_id)
     db.session.commit()
@@ -85,7 +161,10 @@ def login():
         'refresh_token': refresh_token,
         'user': user.to_dict(),
         'tenant': Tenant.query.get(user.tenant_id).to_dict(include_subscription=True) if user.tenant_id else None,
-        'effective_permissions': get_role_config(user.tenant_id, user.role) if user.tenant_id else None,
+        'effective_permissions': get_role_config(user.tenant_id, user.role,
+            Tenant.query.get(user.tenant_id).feature_overrides if user.tenant_id else None
+        ) if user.tenant_id else None,
+        'businesses': _business_list(_get_user_businesses(user)),
     })
 
 
@@ -97,6 +176,10 @@ def refresh():
     if not user or not user.is_active:
         return jsonify({'error': 'User not found or deactivated'}), 401
 
+    claims = get_jwt()
+    if claims.get('tv') != (user.token_version or 0):
+        return jsonify({'error': 'Session expired. Please log in again.'}), 401
+
     additional_claims = {
         'tenant_id': user.tenant_id,
         'role': user.role,
@@ -105,6 +188,76 @@ def refresh():
     }
     access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
     return jsonify({'access_token': access_token})
+
+
+@auth_bp.route('/select-business', methods=['POST'])
+@jwt_required()
+def select_business():
+    """Exchange a selection_token for a full JWT for the chosen tenant."""
+    claims = get_jwt()
+    if claims.get('token_type') != 'business_selection':
+        return jsonify({'error': 'Invalid token type'}), 401
+
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or not user.is_active:
+        return jsonify({'error': 'User not found or deactivated'}), 401
+    if (user.token_version or 0) != (claims.get('tv') or 0):
+        return jsonify({'error': 'Session expired. Please log in again.'}), 401
+
+    data = request.get_json() or {}
+    tenant_id = data.get('tenant_id')
+    if not tenant_id:
+        return jsonify({'error': 'tenant_id is required'}), 400
+
+    # Verify user has access to this tenant
+    tenant_ids = _get_user_businesses(user)
+    if tenant_id not in tenant_ids:
+        return jsonify({'error': 'Access denied to this business'}), 403
+
+    tenant = Tenant.query.get(tenant_id)
+    if not tenant or tenant.status in ('suspended', 'expired') or tenant.deletion_status == 'pending_deletion':
+        return jsonify({'error': 'This business account is not accessible'}), 403
+
+    log_audit(user.id, 'user.business_selected', tenant_id=tenant_id)
+    db.session.commit()
+
+    return jsonify(_build_login_response(user, tenant_id))
+
+
+@auth_bp.route('/switch-business', methods=['POST'])
+@jwt_required()
+def switch_business():
+    """Switch the active business context for an already-logged-in user."""
+    from app.auth.decorators import tenant_required
+    claims = get_jwt()
+    if claims.get('token_type') == 'business_selection':
+        return jsonify({'error': 'Use /select-business for initial selection'}), 400
+
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or not user.is_active:
+        return jsonify({'error': 'User not found or deactivated'}), 401
+    if (user.token_version or 0) != (claims.get('tv') or 0):
+        return jsonify({'error': 'Session expired. Please log in again.'}), 401
+
+    data = request.get_json() or {}
+    tenant_id = data.get('tenant_id')
+    if not tenant_id:
+        return jsonify({'error': 'tenant_id is required'}), 400
+
+    tenant_ids = _get_user_businesses(user)
+    if tenant_id not in tenant_ids:
+        return jsonify({'error': 'Access denied to this business'}), 403
+
+    tenant = Tenant.query.get(tenant_id)
+    if not tenant or tenant.status in ('suspended', 'expired') or tenant.deletion_status == 'pending_deletion':
+        return jsonify({'error': 'This business account is not accessible'}), 403
+
+    log_audit(user.id, 'user.business_switched', tenant_id=tenant_id)
+    db.session.commit()
+
+    return jsonify(_build_login_response(user, tenant_id))
 
 
 @auth_bp.route('/me', methods=['GET'])
@@ -119,8 +272,10 @@ def get_me():
     if user.tenant_id:
         tenant = Tenant.query.get(user.tenant_id)
         response['tenant'] = tenant.to_dict(include_subscription=True) if tenant else None
-        response['effective_permissions'] = get_role_config(user.tenant_id, user.role)
-
+        response['effective_permissions'] = get_role_config(user.tenant_id, user.role,
+            tenant.feature_overrides if tenant else None
+        )
+    response['businesses'] = _business_list(_get_user_businesses(user))
     return jsonify(response)
 
 
@@ -152,7 +307,7 @@ def change_password():
         'tv': user.token_version,
     }
     new_access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
-    new_refresh_token = create_refresh_token(identity=str(user.id))
+    new_refresh_token = create_refresh_token(identity=str(user.id), additional_claims={'tv': user.token_version})
 
     return jsonify({
         'message': 'Password changed successfully',
@@ -304,3 +459,18 @@ def set_initial_password():
         'refresh_token': refresh_token,
         'user': user.to_dict(),
     })
+
+
+@auth_bp.route('/accept-terms', methods=['POST'])
+@jwt_required()
+def accept_terms():
+    from datetime import datetime
+    user_id = get_jwt_identity()
+    user = User.query.get(int(user_id))
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    if user.terms_accepted_at:
+        return jsonify({'message': 'Terms already accepted', 'user': user.to_dict()}), 200
+    user.terms_accepted_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({'message': 'Terms accepted', 'user': user.to_dict()})

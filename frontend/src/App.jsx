@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
@@ -13,6 +13,7 @@ import AdminLayout from '@/layouts/AdminLayout'
 import Login from '@/pages/auth/Login'
 import ForgotPassword from '@/pages/auth/ForgotPassword'
 import ResetPassword from '@/pages/auth/ResetPassword'
+import SelectBusiness from '@/pages/auth/SelectBusiness'
 
 // Landing
 import Landing from '@/pages/Landing'
@@ -36,6 +37,15 @@ import RolePermissions from '@/pages/customer/RolePermissions'
 import Settings from '@/pages/customer/Settings'
 import Outlets from '@/pages/customer/Outlets'
 import CustomerSupport from '@/pages/customer/Support'
+import Terms, { TermsContent } from '@/pages/Terms'
+
+// Salon pages
+import SalonBilling from '@/pages/salon/Billing'
+import SalonBillsLog from '@/pages/salon/BillsLog'
+import SalonServices from '@/pages/salon/Services'
+import SalonCoupons from '@/pages/salon/Coupons'
+import SalonSummary from '@/pages/salon/Summary'
+import SalonReports from '@/pages/salon/Reports'
 
 // Admin pages
 import AdminDashboard from '@/pages/admin/Dashboard'
@@ -46,6 +56,7 @@ import AdminPlans from '@/pages/admin/Plans'
 import AdminRevenue from '@/pages/admin/Revenue'
 import AdminSupport from '@/pages/admin/Support'
 import AdminSystem from '@/pages/admin/System'
+import AdminOnboarding from '@/pages/admin/OnboardingRequests'
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, token } = useAuthStore()
@@ -156,6 +167,86 @@ function ForcePasswordChangeModal() {
   )
 }
 
+function TermsAcceptModal() {
+  const { user } = useAuthStore()
+  const [checked, setChecked] = useState(false)
+  const [scrolledToBottom, setScrolledToBottom] = useState(false)
+  const scrollRef = useRef(null)
+
+  const mutation = useMutation({
+    mutationFn: () => authAPI.acceptTerms(),
+    onSuccess: (res) => {
+      useAuthStore.setState({ user: res.data.user })
+    },
+  })
+
+  // Don't show if already accepted or password change is pending
+  if (!user || user.terms_accepted_at || user.must_change_password) return null
+
+  const handleScroll = () => {
+    const el = scrollRef.current
+    if (!el) return
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 32) {
+      setScrolledToBottom(true)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+
+        {/* Header */}
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200 flex-shrink-0">
+          <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Terms of Service</h2>
+            <p className="text-sm text-gray-500">Please read and accept before continuing</p>
+          </div>
+        </div>
+
+        {/* Scrollable terms */}
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto px-6 py-4 min-h-0"
+        >
+          <TermsContent />
+          {!scrolledToBottom && (
+            <p className="text-center text-xs text-gray-400 mt-4 pb-2">↓ Scroll to the bottom to continue</p>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-gray-200 px-6 py-4 flex-shrink-0 space-y-3">
+          <label className={`flex items-start gap-3 cursor-pointer ${!scrolledToBottom ? 'opacity-40 pointer-events-none' : ''}`}>
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={e => setChecked(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
+            />
+            <span className="text-sm text-gray-700">
+              I have read and agree to the <strong>CheesePOS Terms of Service</strong> and confirm that I am authorised to accept on behalf of my business.
+            </span>
+          </label>
+          <button
+            onClick={() => mutation.mutate()}
+            disabled={!checked || mutation.isPending}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold text-sm hover:from-orange-600 hover:to-orange-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            {mutation.isPending ? 'Saving…' : 'Accept & Continue →'}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const { isSessionExpired, logout, token } = useAuthStore()
 
@@ -173,6 +264,7 @@ export default function App() {
   return (
     <>
       <ForcePasswordChangeModal />
+      <TermsAcceptModal />
       <Routes>
       {/* Public landing */}
       <Route path="/" element={<Landing />} />
@@ -184,6 +276,9 @@ export default function App() {
         <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
         <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
       </Route>
+
+      {/* Business selector — outside AuthLayout so it has its own full-screen style */}
+      <Route path="/select-business" element={<SelectBusiness />} />
 
       {/* Customer portal */}
       <Route path="/app" element={
@@ -208,6 +303,17 @@ export default function App() {
         <Route path="outlets" element={<PermissionRoute permission="outlets"><Outlets /></PermissionRoute>} />
         <Route path="settings" element={<PermissionRoute permission={null}><Settings /></PermissionRoute>} />
         <Route path="support" element={<PermissionRoute permission={null}><CustomerSupport /></PermissionRoute>} />
+        <Route path="terms"   element={<Terms />} />
+
+        {/* Salon / Spa routes */}
+        <Route path="salon">
+          <Route path="billing"  element={<PermissionRoute permission="salon_billing"><SalonBilling /></PermissionRoute>} />
+          <Route path="bills"    element={<PermissionRoute permission="salon_billing"><SalonBillsLog /></PermissionRoute>} />
+          <Route path="services" element={<PermissionRoute permission="salon_services"><SalonServices /></PermissionRoute>} />
+          <Route path="coupons"  element={<PermissionRoute permission="salon_coupons"><SalonCoupons /></PermissionRoute>} />
+          <Route path="summary"  element={<PermissionRoute permission="salon_summary"><SalonSummary /></PermissionRoute>} />
+          <Route path="reports"  element={<PermissionRoute permission="reports"><SalonReports /></PermissionRoute>} />
+        </Route>
       </Route>
 
       {/* Super Admin portal */}
@@ -223,6 +329,7 @@ export default function App() {
         <Route path="revenue" element={<AdminRevenue />} />
         <Route path="support" element={<AdminSupport />} />
         <Route path="system" element={<AdminSystem />} />
+        <Route path="onboarding" element={<AdminOnboarding />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

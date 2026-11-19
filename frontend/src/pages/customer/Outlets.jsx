@@ -1,26 +1,40 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { outletsAPI } from '@/api'
+import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 import { Plus, Edit2, X, MapPin, Phone, Mail, Table2, ChevronRight, Store, Printer } from 'lucide-react'
 
-const OUTLET_TYPES = [
+const BAR_OUTLET_TYPES = [
   { value: 'bar_restaurant', label: 'Bar & Restaurant' },
   { value: 'bar', label: 'Bar Only' },
   { value: 'restaurant', label: 'Restaurant Only' },
 ]
 
+const SALON_OUTLET_TYPES = [
+  { value: 'saloon', label: 'Salon & Spa' },
+]
+
+const ALL_OUTLET_TYPE_LABELS = {
+  bar_restaurant: 'Bar & Restaurant',
+  bar: 'Bar Only',
+  restaurant: 'Restaurant Only',
+  saloon: 'Salon & Spa',
+}
+
 const FLOOR_SECTIONS = ['Main Hall', 'Terrace', 'VIP Room', 'Lounge', 'Outdoor', 'Private Dining']
 
 // ── Outlet Modal ────────────────────────────────────────────────────
-function OutletModal({ outlet, initialTab = 'details', onClose, onSave }) {
+function OutletModal({ outlet, initialTab = 'details', onClose, onSave, businessType }) {
+  const isSalon = businessType === 'saloon'
+  const outletTypes = isSalon ? SALON_OUTLET_TYPES : BAR_OUTLET_TYPES
   const [tab, setTab] = useState(initialTab)
   const defaultPC = { paper_size: '80mm', orientation: 'portrait', copies: 1, auto_print: false }
   const defaultRC = { show_gstin: true, show_tax_breakdown: true, show_payment_mode: true, footer_message: 'Thank you for visiting!', font_size: 'normal' }
 
   const [form, setForm] = useState({
     name: outlet?.name || '',
-    outlet_type: outlet?.outlet_type || 'bar_restaurant',
+    outlet_type: isSalon ? 'saloon' : (outlet?.outlet_type || 'bar_restaurant'),
     phone: outlet?.phone || '',
     email: outlet?.email || '',
     address: outlet?.address || '',
@@ -86,9 +100,13 @@ function OutletModal({ outlet, initialTab = 'details', onClose, onSave }) {
               </div>
               <div>
                 <label className="label">Outlet Type</label>
-                <select className="input" value={form.outlet_type} onChange={e => u('outlet_type', e.target.value)}>
-                  {OUTLET_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
+                {isSalon ? (
+                  <input className="input bg-gray-50" value={outletTypes[0].label} disabled />
+                ) : (
+                  <select className="input" value={form.outlet_type} onChange={e => u('outlet_type', e.target.value)}>
+                    {outletTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -414,6 +432,8 @@ function TablesPanel({ outlet, onClose }) {
 // ── Main Page ────────────────────────────────────────────────────────
 export default function Outlets() {
   const qc = useQueryClient()
+  const { tenant } = useAuthStore()
+  const isSalon = tenant?.business_type === 'saloon'
   const [showModal, setShowModal] = useState(false)
   const [editOutlet, setEditOutlet] = useState(null)
   const [editInitialTab, setEditInitialTab] = useState('details')
@@ -426,8 +446,9 @@ export default function Outlets() {
   }
 
   const { data: outlets = [], isLoading } = useQuery({
-    queryKey: ['outlets'],
+    queryKey: ['outlets', tenant?.id],
     queryFn: () => outletsAPI.list().then(r => r.data),
+    enabled: !!tenant?.id,
   })
 
   const createOutlet = useMutation({
@@ -480,7 +501,7 @@ export default function Outlets() {
 
               <div className="mb-3">
                 <span className="text-xs font-medium bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full capitalize">
-                  {OUTLET_TYPES.find(t => t.value === outlet.outlet_type)?.label || outlet.outlet_type}
+                  {isSalon ? 'Salon & Spa' : (ALL_OUTLET_TYPE_LABELS[outlet.outlet_type] || outlet.outlet_type)}
                 </span>
                 {outlet.is_active ? (
                   <span className="ml-2 text-xs font-medium bg-green-50 text-green-700 px-2 py-0.5 rounded-full">Active</span>
@@ -517,16 +538,18 @@ export default function Outlets() {
               </div>
 
               <div className="flex gap-2">
-                <button
-                  onClick={() => setTablesOutlet(outlet)}
-                  className="flex-1 flex items-center justify-between text-sm text-brand-600 hover:text-brand-700 font-medium border border-brand-200 hover:border-brand-400 rounded-xl px-3 py-2 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <Table2 size={14} />
-                    Manage Tables
-                  </div>
-                  <ChevronRight size={14} />
-                </button>
+                {!isSalon && (
+                  <button
+                    onClick={() => setTablesOutlet(outlet)}
+                    className="flex-1 flex items-center justify-between text-sm text-brand-600 hover:text-brand-700 font-medium border border-brand-200 hover:border-brand-400 rounded-xl px-3 py-2 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Table2 size={14} />
+                      Manage Tables
+                    </div>
+                    <ChevronRight size={14} />
+                  </button>
+                )}
                 <button
                   onClick={() => openEdit(outlet, 'printer')}
                   className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-800 font-medium border border-gray-200 hover:border-gray-400 rounded-xl px-3 py-2 transition-colors"
@@ -544,6 +567,7 @@ export default function Outlets() {
         <OutletModal
           outlet={editOutlet}
           initialTab={editInitialTab}
+          businessType={tenant?.business_type}
           onClose={() => setShowModal(false)}
           onSave={data => editOutlet
             ? updateOutlet.mutateAsync({ id: editOutlet.id, data })

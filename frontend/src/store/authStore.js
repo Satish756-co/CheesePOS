@@ -1,20 +1,24 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import api from '@/api/client'
+import { BUSINESS_CONFIG } from '@/config/businessConfig'
 
-// Fallback hardcoded map used when effectivePermissions hasn't loaded yet
-const FALLBACK_ROLE_PAGES = {
-  owner: ['*'],
-  admin: ['dashboard', 'billing', 'table_billing', 'orders', 'tables', 'sales_log',
-          'kot', 'products', 'inventory', 'purchases', 'expenses', 'reports', 'users', 'roles', 'outlets'],
-  manager: ['dashboard', 'billing', 'table_billing', 'orders', 'tables', 'sales_log',
-             'kot', 'inventory', 'expenses', 'reports'],
-  cashier: ['dashboard', 'billing', 'table_billing', 'sales_log'],
-  waiter: ['dashboard', 'table_billing', 'orders', 'tables'],
-  kitchen: ['dashboard', 'kot'],
-  inventory_manager: ['dashboard', 'products', 'inventory', 'purchases'],
-  accountant: ['dashboard', 'expenses', 'reports', 'sales_log'],
+// Derive FALLBACK_ROLE_PAGES by unioning pages from every business type config.
+// This is used only before effectivePermissions loads from the backend.
+function buildFallbackRolePages() {
+  const result = { owner: ['*'] }
+  const roles = ['admin', 'manager', 'cashier', 'waiter', 'kitchen', 'inventory_manager', 'accountant']
+  for (const role of roles) {
+    const pageSet = new Set()
+    for (const config of Object.values(BUSINESS_CONFIG)) {
+      for (const p of config.fallbackPages?.[role] || []) pageSet.add(p)
+    }
+    result[role] = [...pageSet]
+  }
+  return result
 }
+
+const FALLBACK_ROLE_PAGES = buildFallbackRolePages()
 
 export const useAuthStore = create(
   persist(
@@ -25,9 +29,10 @@ export const useAuthStore = create(
       refreshToken: null,
       effectivePermissions: null,
       sessionExpiry: null,
+      businesses: [],
 
-      setAuth: (user, tenant, token, refreshToken, effectivePermissions = null) =>
-        set({ user, tenant, token, refreshToken, effectivePermissions, sessionExpiry: Date.now() + 4 * 60 * 60 * 1000 }),
+      setAuth: (user, tenant, token, refreshToken, effectivePermissions = null, businesses = []) =>
+        set({ user, tenant, token, refreshToken, effectivePermissions, sessionExpiry: Date.now() + 4 * 60 * 60 * 1000, businesses }),
 
       setToken: (token) => set({ token }),
 
@@ -41,10 +46,17 @@ export const useAuthStore = create(
         try {
           const res = await api.get('/auth/me')
           const data = res.data
+          // Guard against race: if the response's tenant differs from the current
+          // tenant (e.g. switchBusiness fired while this request was in-flight),
+          // discard the stale response rather than overwriting the new tenant.
+          const currentTenantId = get().tenant?.id
+          const freshTenantId = data.tenant?.id
+          if (currentTenantId && freshTenantId && currentTenantId !== freshTenantId) return
           set({
             user: data.user ?? get().user,
             tenant: data.tenant ?? get().tenant,
             effectivePermissions: data.effective_permissions ?? get().effectivePermissions,
+            businesses: data.businesses ?? get().businesses,
           })
         } catch (err) {
           // On 401/403 the session is invalid — log out immediately
@@ -55,7 +67,7 @@ export const useAuthStore = create(
         }
       },
 
-      logout: () => set({ user: null, tenant: null, token: null, refreshToken: null, effectivePermissions: null, sessionExpiry: null }),
+      logout: () => set({ user: null, tenant: null, token: null, refreshToken: null, effectivePermissions: null, sessionExpiry: null, businesses: [] }),
 
       isSessionExpired: () => {
         const expiry = get().sessionExpiry
@@ -72,9 +84,16 @@ export const useAuthStore = create(
         const user = get().user
         if (!user) return false
         if (user.is_super_admin) return true
-        if (user.role === 'owner') return true
 
         const perms = get().effectivePermissions
+
+        // Admin can disable features tenant-wide — blocks all roles including owner
+        const disabled = perms?.disabled_features ?? []
+        const permList = Array.isArray(permission) ? permission : [permission]
+        if (permList.every(p => disabled.includes(p))) return false
+
+        if (user.role === 'owner') return true
+
         const pages = perms?.pages ?? FALLBACK_ROLE_PAGES[user.role] ?? []
         if (pages.includes('*')) return true
 
@@ -131,32 +150,23 @@ export const useAuthStore = create(
         if (!user) return '/login'
         if (user.is_super_admin) return '/admin/dashboard'
 
-        const ORDERED_PAGES = [
-          { path: '/app/dashboard',    permission: 'dashboard' },
-          { path: '/app/table-billing',permission: 'table_billing' },
-          { path: '/app/billing',      permission: 'billing' },
-          { path: '/app/orders',       permission: 'orders' },
-          { path: '/app/tables',       permission: 'tables' },
-          { path: '/app/kot',          permission: 'kot' },
-          { path: '/app/sales-log',    permission: 'sales_log' },
-          { path: '/app/inventory',    permission: 'inventory' },
-          { path: '/app/products',     permission: 'products' },
-          { path: '/app/purchases',    permission: 'purchases' },
-          { path: '/app/expenses',     permission: 'expenses' },
-          { path: '/app/reports',      permission: 'reports' },
-          { path: '/app/users',        permission: 'users' },
-          { path: '/app/roles',        permission: 'roles' },
-          { path: '/app/outlets',      permission: 'outlets' },
-        ]
+        const businessType = state.tenant?.business_type
 
-        for (const { path, permission } of ORDERED_PAGES) {
+        const orderedPages = BUSINESS_CONFIG[businessType]?.orderedPages || []
+
+        for (const { path, permission } of orderedPages) {
           if (state.hasPermission(permission)) return path
         }
         return '/app/settings'
       },
 
-      isSubscriptionActive: () => {
-        const tenant = get().tenant
+      switchBusiness: async (tenantId) => {
+        const res = await api.post('/auth/switch-business', { tenant_id: tenantId })
+        const d = res.data
+        get().setAuth(d.user, d.tenant, d.access_token, d.refresh_token, d.effective_permissions, d.businesses ?? [])
+      },
+
+      isSubscriptionActive: () => {        const tenant = get().tenant
         if (!tenant) return false
         if (tenant.status === 'trial') {
           if (!tenant.trial_ends_at) return true
@@ -174,6 +184,7 @@ export const useAuthStore = create(
         refreshToken: state.refreshToken,
         effectivePermissions: state.effectivePermissions,
         sessionExpiry: state.sessionExpiry,
+        businesses: state.businesses,
       }),
     }
   )

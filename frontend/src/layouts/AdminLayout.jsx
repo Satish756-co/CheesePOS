@@ -3,15 +3,16 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   LayoutDashboard, Users, CreditCard, BarChart2,
-  Headphones, Activity, Package, LogOut, Menu, X
+  Headphones, Activity, Package, LogOut, Menu, X, ClipboardList
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
-import { authAPI, supportAPI } from '@/api'
+import { authAPI, supportAPI, adminAPI } from '@/api'
 import BrandLogo from '@/components/BrandLogo'
 
 const navItems = [
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/admin/tenants', icon: Users, label: 'Customers' },
+  { to: '/admin/onboarding', icon: ClipboardList, label: 'Onboarding' },
   { to: '/admin/subscriptions', icon: CreditCard, label: 'Subscriptions' },
   { to: '/admin/plans', icon: Package, label: 'Plans' },
   { to: '/admin/revenue', icon: BarChart2, label: 'Revenue' },
@@ -19,7 +20,7 @@ const navItems = [
   { to: '/admin/system', icon: Activity, label: 'System' },
 ]
 
-function AdminNav({ items, supportBadge, expanded, onNavigate }) {
+function AdminNav({ items, supportBadge, onboardingBadge, expanded, onNavigate }) {
   return (
     <nav className="flex-1 py-4 overflow-y-auto">
       {items.map(({ to, icon: Icon, label }) => (
@@ -40,11 +41,19 @@ function AdminNav({ items, supportBadge, expanded, onNavigate }) {
             {to === '/admin/support' && supportBadge > 0 && !expanded && (
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
             )}
+            {to === '/admin/onboarding' && onboardingBadge > 0 && !expanded && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full" />
+            )}
           </div>
           {expanded && <span className="text-sm font-medium flex-1">{label}</span>}
           {expanded && to === '/admin/support' && supportBadge > 0 && (
             <span className="bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">
               {supportBadge > 9 ? '9+' : supportBadge}
+            </span>
+          )}
+          {expanded && to === '/admin/onboarding' && onboardingBadge > 0 && (
+            <span className="bg-yellow-400 text-yellow-900 text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">
+              {onboardingBadge > 9 ? '9+' : onboardingBadge}
             </span>
           )}
         </NavLink>
@@ -66,6 +75,14 @@ export default function AdminLayout() {
     enabled: !!token,
   })
   const supportBadge = unreadData?.count || 0
+
+  const { data: onboardingData } = useQuery({
+    queryKey: ['admin-onboarding-pending-count'],
+    queryFn: () => adminAPI.listOnboardingRequests({ status: 'pending', per_page: 1 }).then(r => r.data),
+    refetchInterval: 60000,
+    enabled: !!token,
+  })
+  const onboardingBadge = onboardingData?.pending_count || 0
 
   useEffect(() => {
     const onResize = () => { if (window.innerWidth >= 768) setMobileOpen(false) }
@@ -114,7 +131,7 @@ export default function AdminLayout() {
             <img src="/logo-icon.png" alt="CheesePOS" className="h-8 w-auto" />
           )}
         </div>
-        <AdminNav items={navItems} supportBadge={supportBadge} expanded={sidebarOpen} onNavigate={() => {}} />
+        <AdminNav items={navItems} supportBadge={supportBadge} onboardingBadge={onboardingBadge} expanded={sidebarOpen} onNavigate={() => {}} />
         <UserFooter expanded={sidebarOpen} />
       </aside>
 
@@ -132,7 +149,7 @@ export default function AdminLayout() {
             <X size={20} />
           </button>
         </div>
-        <AdminNav items={navItems} supportBadge={supportBadge} expanded={true} onNavigate={() => setMobileOpen(false)} />
+        <AdminNav items={navItems} supportBadge={supportBadge} onboardingBadge={onboardingBadge} expanded={true} onNavigate={() => setMobileOpen(false)} />
         <UserFooter expanded={true} />
       </aside>
 
