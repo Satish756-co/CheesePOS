@@ -134,17 +134,17 @@ export const BUSINESS_CONFIG = {
 
     // Sidebar nav items specific to this business type (CustomerLayout.jsx)
     navItems: [
-      { to: '/app/daily',        icon: CalendarDays, label: 'Daily Summary',   permission: 'dashboard' },
-      { to: '/app/reports',      icon: BarChart2,    label: 'Reports',         permission: 'reports' },
       { to: '/app/billing',      icon: Receipt,      label: 'Counter Billing', permission: 'billing' },
       { to: '/app/table-billing',icon: Table2,       label: 'Table Billing',   permission: 'table_billing' },
       { to: '/app/tables',       icon: Table2,       label: 'Tables',          permission: 'tables' },
       { to: '/app/orders',       icon: ShoppingCart, label: 'Orders',          permission: 'orders' },
-      { to: '/app/sales-log',    icon: ClipboardList,label: 'Sales Log',       permission: 'sales_log' },
       { to: '/app/kot',          icon: ChefHat,      label: 'Kitchen / KOT',   permission: 'kot' },
+      { to: '/app/sales-log',    icon: ClipboardList,label: 'Sales Log',       permission: 'sales_log' },
       { to: '/app/products',     icon: Package,      label: 'Products',        permission: 'products' },
       { to: '/app/inventory',    icon: Warehouse,    label: 'Inventory',       permission: 'inventory' },
       { to: '/app/purchases',    icon: Truck,        label: 'Purchases',       permission: 'purchases' },
+      { to: '/app/daily',        icon: CalendarDays, label: 'Daily Summary',   permission: 'dashboard' },
+      { to: '/app/reports',      icon: BarChart2,    label: 'Reports',         permission: 'reports' },
     ],
 
     // authStore getHomeRoute ordered pages
