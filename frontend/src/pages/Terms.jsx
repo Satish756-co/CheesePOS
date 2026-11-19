@@ -13,7 +13,7 @@ export function TermsContent() {
 
       <p>
         These Terms of Service ("Agreement") constitute a legally binding contract between
-        <strong> [COMPANY NAME]</strong> ("Company", "we", "us", "our"), the provider of the
+        <strong> CheesePOS</strong> ("Company", "we", "us", "our"), the provider of the
         CheesePOS software-as-a-service platform, and the entity or individual ("Customer", "you")
         that accesses or uses the CheesePOS platform. By accepting this Agreement, creating an
         account, or using the Service, you agree to be bound by these terms in their entirety.
@@ -50,7 +50,7 @@ export function TermsContent() {
       <p>
         You must provide accurate, complete, and current information when creating your account.
         You are responsible for safeguarding your login credentials and for all activities that
-        occur under your account. Notify us immediately at <strong>[SUPPORT EMAIL]</strong> if
+        occur under your account. Notify us immediately at <strong>cheesepossupport@gmail.com</strong> if
         you suspect any unauthorised access.
       </p>
       <p className="mt-2">
@@ -122,7 +122,7 @@ export function TermsContent() {
       </p>
       <p className="mt-2">
         Technical support is provided via the in-app Support module and by email at
-        <strong> [SUPPORT EMAIL]</strong>. Response times are on a best-effort basis and are
+        <strong> cheesepossupport@gmail.com</strong>. Response times are on a best-effort basis and are
         not guaranteed unless specified in a separate service-level agreement.
       </p>
 
@@ -153,7 +153,7 @@ export function TermsContent() {
       <h2 className="text-base font-bold text-gray-900 mt-6 mb-2">10. Termination</h2>
       <p>
         <strong>By Customer:</strong> You may terminate your account at any time by contacting
-        us at <strong>[SUPPORT EMAIL]</strong>. No refund will be issued for prepaid subscription
+        us at <strong>cheesepossupport@gmail.com</strong>. No refund will be issued for prepaid subscription
         periods already billed, except where required by applicable law.
       </p>
       <p className="mt-2">
@@ -208,7 +208,7 @@ export function TermsContent() {
         This Agreement shall be governed by and construed in accordance with the laws of India.
         Any dispute, controversy, or claim arising out of or relating to this Agreement, or the
         breach, termination, or validity thereof, shall be subject to the exclusive jurisdiction
-        of the courts located at <strong>[CITY], [STATE], India</strong>.
+        of the courts located at <strong>Nellore, Andhra Pradesh, India</strong>.
       </p>
       <p className="mt-2">
         Before initiating any legal proceedings, the parties agree to attempt to resolve any
@@ -240,10 +240,9 @@ export function TermsContent() {
         For questions about these terms, billing, or data requests, please contact:
       </p>
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-2 text-sm space-y-1">
-        <p><strong>[COMPANY NAME]</strong></p>
-        <p>[ADDRESS LINE 1]</p>
-        <p>[CITY], [STATE] – [PINCODE], India</p>
-        <p>Email: <strong>[SUPPORT EMAIL]</strong></p>
+        <p><strong>CheesePOS</strong></p>
+        <p>Nellore, Andhra Pradesh – 524002, India</p>
+        <p>Email: <strong>cheesepossupport@gmail.com</strong></p>
       </div>
 
     </div>
