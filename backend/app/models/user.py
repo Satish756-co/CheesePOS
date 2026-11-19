@@ -109,7 +109,12 @@ def get_role_config(tenant_id, role, feature_overrides=None):
     else:
         db_config = TenantRoleConfig.query.filter_by(tenant_id=tenant_id, role=role).first()
         if db_config:
-            config = {'pages': db_config.pages, 'actions': db_config.actions,
+            pages = list(db_config.pages or [])
+            # Ensure support is always reachable for roles that can manage the business.
+            # Saved configs pre-date support being a toggleable page, so backfill it here.
+            if role in ('admin', 'manager') and 'support' not in pages:
+                pages.append('support')
+            config = {'pages': pages, 'actions': db_config.actions,
                       'approvals': db_config.approvals, 'data_scope': db_config.data_scope}
         else:
             config = ROLE_DEFAULT_CONFIGS.get(

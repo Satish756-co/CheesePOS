@@ -279,6 +279,8 @@ function FeatureOverridesSection({ tenantId, currentOverrides, onSaved, business
 
   const featureList = BUSINESS_CONFIG[businessType]?.featureList || []
 
+  if (featureList.length === 0) return null
+
   const isDisabled = (key) => overrides[key] === false
 
   const toggle = (key) => {
