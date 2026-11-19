@@ -368,7 +368,7 @@ export default function SalonServices() {
 
       {activeTab === 'services' && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center flex-wrap gap-2">
             <p className="text-sm text-gray-500">{services.length} service{services.length !== 1 ? 's' : ''} in {categories.length} categories</p>
             <div className="flex gap-2">
               <button onClick={() => { setEditCategory(null); setShowCategoryModal(true) }} className="btn-secondary text-sm flex items-center gap-1.5">
@@ -418,6 +418,7 @@ export default function SalonServices() {
                   {cat.services.length === 0 ? (
                     <p className="text-sm text-gray-400 px-4 py-3">No services in this category yet.</p>
                   ) : (
+                    <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50">
                         <tr>
@@ -452,6 +453,7 @@ export default function SalonServices() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   )}
                 </div>
               )}
