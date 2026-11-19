@@ -10,15 +10,19 @@ import { authAPI, supportAPI, salonAPI } from '@/api'
 import BrandLogo from '@/components/BrandLogo'
 import { BUSINESS_CONFIG } from '@/config/businessConfig'
 
-// Universal nav items shown for all business types
-const UNIVERSAL_NAV = [
-  { to: '/app/dashboard', icon: LayoutDashboard, label: 'Dashboard',        permission: 'dashboard' },
-  { to: '/app/expenses',  icon: TrendingDown,    label: 'Expenses',         permission: 'expenses' },
-  { to: '/app/users',     icon: Users,           label: 'Users & Roles',    permission: 'users' },
-  { to: '/app/roles',     icon: Shield,          label: 'Role Permissions', permission: 'roles' },
-  { to: '/app/outlets',   icon: Store,           label: 'Outlets',          permission: 'outlets' },
-  { to: '/app/settings',  icon: Settings,        label: 'Settings',         permission: null },
-  { to: '/app/support',   icon: Headphones,      label: 'Support',          permission: 'support' },
+// Dashboard always first
+const TOP_NAV = [
+  { to: '/app/dashboard', icon: LayoutDashboard, label: 'Dashboard', permission: 'dashboard' },
+]
+
+// Admin/settings items always last, below business-specific items
+const BOTTOM_NAV = [
+  { to: '/app/expenses',  icon: TrendingDown, label: 'Expenses',         permission: 'expenses' },
+  { to: '/app/users',     icon: Users,        label: 'Users & Roles',    permission: 'users' },
+  { to: '/app/roles',     icon: Shield,       label: 'Role Permissions', permission: 'roles' },
+  { to: '/app/outlets',   icon: Store,        label: 'Outlets',          permission: 'outlets' },
+  { to: '/app/settings',  icon: Settings,     label: 'Settings',         permission: null },
+  { to: '/app/support',   icon: Headphones,   label: 'Support',          permission: 'support' },
 ]
 
 function SidebarNav({ items, badges = {}, sidebarOpen, onNavigate }) {
@@ -173,7 +177,7 @@ export default function CustomerLayout() {
   }
 
   const bizNavItems = BUSINESS_CONFIG[tenant?.business_type]?.navItems || []
-  const allNavItems = [...UNIVERSAL_NAV, ...bizNavItems]
+  const allNavItems = [...TOP_NAV, ...bizNavItems, ...BOTTOM_NAV]
   const visibleItems = allNavItems.filter(item =>
     item.permission === null || hasPermission(item.permission)
   )
