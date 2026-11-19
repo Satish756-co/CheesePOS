@@ -92,8 +92,10 @@ function ApproveModal({ request, onClose, onApprove }) {
     owner_name: request.owner_name || '',
     phone: request.phone,
     business_type: request.business_type || 'bar_restaurant',
-    city: '',
-    state: '',
+    city: request.city || '',
+    state: request.state || '',
+    pincode: request.pincode || '',
+    country: request.country || 'India',
   })
   const [loading, setLoading] = useState(false)
 
@@ -147,6 +149,16 @@ function ApproveModal({ request, onClose, onApprove }) {
             <div>
               <label className="label">State</label>
               <input className="input" value={form.state} onChange={e => set('state', e.target.value)} placeholder="Optional" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Country</label>
+              <input className="input" value={form.country} onChange={e => set('country', e.target.value)} placeholder="e.g. India" />
+            </div>
+            <div>
+              <label className="label">Pincode</label>
+              <input className="input" value={form.pincode} onChange={e => set('pincode', e.target.value)} placeholder="e.g. 400001" />
             </div>
           </div>
         </div>

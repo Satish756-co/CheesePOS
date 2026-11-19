@@ -184,6 +184,7 @@ export const adminAPI = {
   createTenant: (data) => api.post('/admin/tenants', data),
   deleteTenant: (id) => api.delete(`/admin/tenants/${id}`),
   reactivateTenant: (id) => api.post(`/admin/tenants/${id}/reactivate`),
+  forceDeleteTenant: (id) => api.delete(`/admin/tenants/${id}/force-delete`),
   resetUserPassword: (tenantId, userId) => api.post(`/admin/tenants/${tenantId}/users/${userId}/reset-password`),
   updateFeatureOverrides: (tenantId, overrides) => api.put(`/admin/tenants/${tenantId}/feature-overrides`, overrides),
   listOnboardingRequests: (params) => api.get('/admin/onboarding-requests', { params }),

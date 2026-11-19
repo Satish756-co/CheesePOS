@@ -970,6 +970,18 @@ def reactivate_tenant(tenant_id):
     return jsonify(tenant.to_dict())
 
 
+@admin_bp.route('/tenants/<int:tenant_id>/force-delete', methods=['DELETE'])
+@jwt_required()
+@super_admin_required
+def force_delete_tenant(tenant_id):
+    tenant = Tenant.query.get_or_404(tenant_id)
+    if tenant.deletion_status != 'pending_deletion':
+        return jsonify({'error': 'Tenant is not in pending_deletion state'}), 400
+    _hard_purge_tenant(tenant)
+    db.session.commit()
+    return jsonify({'message': 'Tenant permanently deleted'})
+
+
 # ─── Onboarding Requests ──────────────────────────────────────────────────────
 
 @admin_bp.route('/onboarding-requests', methods=['GET'])
@@ -1013,8 +1025,10 @@ def approve_onboarding_request(req_id):
     email = data.get('email', orq.email).lower().strip()
     owner_name = data.get('owner_name', orq.owner_name or '').strip()
     phone = data.get('phone', orq.phone).strip()
-    city = data.get('city', '').strip()
-    state = data.get('state', '').strip()
+    city = data.get('city', orq.city or '').strip()
+    state = data.get('state', orq.state or '').strip()
+    pincode = data.get('pincode', orq.pincode or '').strip()
+    country = data.get('country', orq.country or '').strip()
     business_type = data.get('business_type', orq.business_type or 'bar_restaurant').strip()
 
     existing_user = User.query.filter_by(email=email).first()
@@ -1044,6 +1058,8 @@ def approve_onboarding_request(req_id):
         phone=phone,
         city=city,
         state=state,
+        pincode=pincode,
+        country=country,
         business_type=business_type,
         status='trial',
         trial_ends_at=datetime.utcnow() + timedelta(days=trial_days),
@@ -1082,6 +1098,7 @@ def approve_onboarding_request(req_id):
         name=business_name,
         city=city,
         state=state,
+        pincode=pincode,
         is_active=True,
     )
     db.session.add(outlet)
