@@ -9,7 +9,7 @@
 import {
   LayoutDashboard, Receipt, Table2, ShoppingCart, ChefHat,
   Package, Warehouse, Truck, TrendingDown, BarChart2, Users,
-  Store, ClipboardList, Shield, Scissors, Tag, FileText, CalendarDays,
+  Store, ClipboardList, Shield, Scissors, Tag, FileText, CalendarDays, Headphones,
 } from 'lucide-react'
 
 export const BUSINESS_CONFIG = {
@@ -55,6 +55,7 @@ export const BUSINESS_CONFIG = {
       { key: 'users',         label: 'Users & Roles',    icon: Users },
       { key: 'roles',         label: 'Role Permissions', icon: Shield },
       { key: 'outlets',       label: 'Outlets',          icon: Store },
+      { key: 'support',       label: 'Support',          icon: Headphones },
     ],
 
     // Role Permissions action groups (RolePermissions.jsx)
@@ -226,6 +227,7 @@ export const BUSINESS_CONFIG = {
       { key: 'users',          label: 'Users & Roles',       icon: Users },
       { key: 'roles',          label: 'Role Permissions',    icon: Shield },
       { key: 'outlets',        label: 'Outlets',             icon: Store },
+      { key: 'support',        label: 'Support',             icon: Headphones },
     ],
 
     // Role Permissions action groups (RolePermissions.jsx)
