@@ -521,6 +521,7 @@ def _send_async(app, msg):
         try:
             mail.send(msg)
         except Exception as e:
+            print(f'[EMAIL ERROR] Admin welcome email failed: {e}', flush=True)
             app.logger.error(f'Admin welcome email failed: {e}')
 
 
@@ -742,11 +743,21 @@ def _send_welcome_email(app, email, business_name, owner_name, temp_password, bu
 </body>
 </html>"""
 
+    plain_text = (
+        f'Welcome to CheesePOS!\n\n'
+        f'Your {biz_label} business "{business_name}" is ready.\n\n'
+        f'Login URL: {login_url}\n'
+        f'Password:  {temp_password}\n\n'
+        f'This is a temporary password — please change it after your first login.\n\n'
+        f'Support: cheesepossupport@gmail.com'
+    )
     msg = Message(
         subject=f'Welcome to CheesePOS — {html_mod.escape(business_name)} is ready!',
         recipients=[email],
+        body=plain_text,
         html=html_content,
     )
+    print(f'[EMAIL] Sending welcome email to {email} for {business_name}', flush=True)
     thread = threading.Thread(target=_send_async, args=(app, msg))
     thread.daemon = True
     thread.start()
