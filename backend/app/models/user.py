@@ -39,7 +39,7 @@ ROLE_DEFAULT_CONFIGS = {
     'admin': {
         'pages': ['dashboard', 'billing', 'table_billing', 'orders', 'tables', 'sales_log',
                   'kot', 'products', 'inventory', 'purchases', 'expenses', 'reports', 'users', 'roles', 'outlets',
-                  'salon_billing', 'salon_bills_log', 'salon_services', 'salon_coupons', 'salon_summary'],
+                  'salon_billing', 'salon_bills_log', 'salon_services', 'salon_coupons', 'salon_summary', 'support'],
         'actions': ['billing.view', 'billing.create', 'billing.cancel', 'billing.cancel_own', 'billing.discount',
                     'orders.view', 'orders.create', 'orders.edit', 'orders.cancel',
                     'tables.view', 'tables.update',
