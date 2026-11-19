@@ -795,6 +795,7 @@ def _hard_purge_tenant(tenant):
         "DELETE FROM tenant_subscriptions WHERE tenant_id = :tid",
         "DELETE FROM tenant_role_configs WHERE tenant_id = :tid",
         "DELETE FROM data_reset_batches WHERE tenant_id = :tid",
+        "DELETE FROM onboarding_requests WHERE tenant_id = :tid",
     ]
     for stmt in stmts:
         try:
