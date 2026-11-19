@@ -767,28 +767,46 @@ def _hard_purge_tenant(tenant):
     """Hard-delete all data for a tenant. Called after cooling period expires."""
     tid = tenant.id
     stmts = [
+        # Break FK cycles
         "UPDATE orders SET invoice_id = NULL WHERE tenant_id = :tid",
         "UPDATE invoices SET order_id = NULL WHERE tenant_id = :tid",
+        # Support
         "DELETE FROM ticket_messages WHERE ticket_id IN (SELECT id FROM support_tickets WHERE tenant_id = :tid)",
         "DELETE FROM support_tickets WHERE tenant_id = :tid",
+        # Billing
         "DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE tenant_id = :tid)",
-        "DELETE FROM bill_payments WHERE invoice_id IN (SELECT id FROM invoices WHERE tenant_id = :tid)",
+        "DELETE FROM bill_payments WHERE tenant_id = :tid",
         "DELETE FROM invoices WHERE tenant_id = :tid",
         "DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE tenant_id = :tid)",
         "DELETE FROM kot_items WHERE kot_id IN (SELECT id FROM kots WHERE tenant_id = :tid)",
         "DELETE FROM kots WHERE tenant_id = :tid",
         "DELETE FROM orders WHERE tenant_id = :tid",
+        # Purchases / inventory
         "DELETE FROM purchase_items WHERE purchase_id IN (SELECT id FROM purchases WHERE tenant_id = :tid)",
         "DELETE FROM purchases WHERE tenant_id = :tid",
         "DELETE FROM stock_transfer_items WHERE transfer_id IN (SELECT id FROM stock_transfers WHERE tenant_id = :tid)",
         "DELETE FROM stock_transfers WHERE tenant_id = :tid",
         "DELETE FROM inventory_ledger WHERE tenant_id = :tid",
         "DELETE FROM stock_balances WHERE tenant_id = :tid",
+        # Salon (children before parents)
+        "DELETE FROM salon_bill_items WHERE bill_id IN (SELECT id FROM salon_bills WHERE tenant_id = :tid)",
+        "DELETE FROM salon_bill_cancel_requests WHERE tenant_id = :tid",
+        "DELETE FROM salon_bills WHERE tenant_id = :tid",
+        "DELETE FROM salon_service_outlet_prices WHERE service_id IN (SELECT id FROM salon_services WHERE tenant_id = :tid)",
+        "DELETE FROM salon_package_services WHERE package_id IN (SELECT id FROM salon_packages WHERE tenant_id = :tid)",
+        "DELETE FROM salon_package_outlet_prices WHERE package_id IN (SELECT id FROM salon_packages WHERE tenant_id = :tid)",
+        "DELETE FROM salon_packages WHERE tenant_id = :tid",
+        "DELETE FROM salon_services WHERE tenant_id = :tid",
+        "DELETE FROM salon_service_categories WHERE tenant_id = :tid",
+        "DELETE FROM salon_coupons WHERE tenant_id = :tid",
+        # Other
         "DELETE FROM expenses WHERE tenant_id = :tid",
         "DELETE FROM audit_logs WHERE tenant_id = :tid",
+        # Users
         "DELETE FROM user_outlets WHERE user_id IN (SELECT id FROM users WHERE tenant_id = :tid)",
         "DELETE FROM user_tenant_access WHERE tenant_id = :tid",
         "DELETE FROM users WHERE tenant_id = :tid",
+        # Tenant-level
         "DELETE FROM products WHERE tenant_id = :tid",
         "DELETE FROM outlets WHERE tenant_id = :tid",
         "DELETE FROM subscription_payments WHERE tenant_id = :tid",
@@ -797,11 +815,14 @@ def _hard_purge_tenant(tenant):
         "DELETE FROM data_reset_batches WHERE tenant_id = :tid",
         "DELETE FROM onboarding_requests WHERE tenant_id = :tid",
     ]
-    for stmt in stmts:
+    for i, stmt in enumerate(stmts):
         try:
+            db.session.execute(db.text(f"SAVEPOINT purge_{i}"))
             db.session.execute(db.text(stmt), {'tid': tid})
+            db.session.execute(db.text(f"RELEASE SAVEPOINT purge_{i}"))
         except Exception as e:
-            current_app.logger.warning(f'Purge: {stmt} → {e}')
+            db.session.execute(db.text(f"ROLLBACK TO SAVEPOINT purge_{i}"))
+            current_app.logger.warning(f'Purge skip: {stmt[:60]} → {e}')
     db.session.delete(tenant)
     db.session.commit()
 
