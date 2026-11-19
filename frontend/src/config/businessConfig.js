@@ -134,16 +134,17 @@ export const BUSINESS_CONFIG = {
 
     // Sidebar nav items specific to this business type (CustomerLayout.jsx)
     navItems: [
+      { to: '/app/daily',        icon: CalendarDays, label: 'Daily Summary',   permission: 'dashboard' },
       { to: '/app/billing',      icon: Receipt,      label: 'Counter Billing', permission: 'billing' },
       { to: '/app/table-billing',icon: Table2,       label: 'Table Billing',   permission: 'table_billing' },
       { to: '/app/tables',       icon: Table2,       label: 'Tables',          permission: 'tables' },
       { to: '/app/orders',       icon: ShoppingCart, label: 'Orders',          permission: 'orders' },
-      { to: '/app/kot',          icon: ChefHat,      label: 'Kitchen / KOT',   permission: 'kot' },
       { to: '/app/sales-log',    icon: ClipboardList,label: 'Sales Log',       permission: 'sales_log' },
+      { to: '/app/kot',          icon: ChefHat,      label: 'Kitchen / KOT',   permission: 'kot' },
       { to: '/app/products',     icon: Package,      label: 'Products',        permission: 'products' },
       { to: '/app/inventory',    icon: Warehouse,    label: 'Inventory',       permission: 'inventory' },
       { to: '/app/purchases',    icon: Truck,        label: 'Purchases',       permission: 'purchases' },
-      { to: '/app/daily',        icon: CalendarDays, label: 'Daily Summary',   permission: 'dashboard' },
+      { to: '/app/expenses',     icon: TrendingDown, label: 'Expenses',        permission: 'expenses' },
       { to: '/app/reports',      icon: BarChart2,    label: 'Reports',         permission: 'reports' },
     ],
 
@@ -277,6 +278,7 @@ export const BUSINESS_CONFIG = {
       { to: '/app/salon/bills',    icon: ClipboardList,label: 'Bills Log',       permission: 'salon_bills_log' },
       { to: '/app/salon/services', icon: Scissors,     label: 'Services',        permission: 'salon_services' },
       { to: '/app/salon/coupons',  icon: Tag,          label: 'Coupons',         permission: 'salon_coupons' },
+      { to: '/app/expenses',       icon: TrendingDown, label: 'Expenses',        permission: 'expenses' },
       { to: '/app/salon/reports',  icon: BarChart2,    label: 'Reports',         permission: 'reports' },
       { to: '/app/salon/summary',  icon: FileText,     label: 'Summary',         permission: 'salon_summary' },
     ],

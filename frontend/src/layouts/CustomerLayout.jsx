@@ -15,14 +15,13 @@ const TOP_NAV = [
   { to: '/app/dashboard', icon: LayoutDashboard, label: 'Dashboard', permission: 'dashboard' },
 ]
 
-// Admin/settings items always last, below business-specific items
+// Admin items always last, below business-specific items
 const BOTTOM_NAV = [
-  { to: '/app/expenses',  icon: TrendingDown, label: 'Expenses',         permission: 'expenses' },
-  { to: '/app/users',     icon: Users,        label: 'Users & Roles',    permission: 'users' },
-  { to: '/app/roles',     icon: Shield,       label: 'Role Permissions', permission: 'roles' },
-  { to: '/app/outlets',   icon: Store,        label: 'Outlets',          permission: 'outlets' },
-  { to: '/app/settings',  icon: Settings,     label: 'Settings',         permission: null },
-  { to: '/app/support',   icon: Headphones,   label: 'Support',          permission: 'support' },
+  { to: '/app/users',    icon: Users,      label: 'Users & Roles',    permission: 'users' },
+  { to: '/app/roles',    icon: Shield,     label: 'Role Permissions', permission: 'roles' },
+  { to: '/app/outlets',  icon: Store,      label: 'Outlets',          permission: 'outlets' },
+  { to: '/app/settings', icon: Settings,   label: 'Settings',         permission: null },
+  { to: '/app/support',  icon: Headphones, label: 'Support',          permission: 'support' },
 ]
 
 function SidebarNav({ items, badges = {}, sidebarOpen, onNavigate }) {
