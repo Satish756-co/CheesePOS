@@ -268,11 +268,16 @@ def get_me():
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
+    # Use the tenant_id from the JWT claim (reflects the currently-active business
+    # for multi-business users), falling back to the user's primary tenant.
+    claims = get_jwt()
+    active_tenant_id = claims.get('tenant_id') or user.tenant_id
+
     response = {'user': user.to_dict()}
-    if user.tenant_id:
-        tenant = Tenant.query.get(user.tenant_id)
+    if active_tenant_id:
+        tenant = Tenant.query.get(active_tenant_id)
         response['tenant'] = tenant.to_dict(include_subscription=True) if tenant else None
-        response['effective_permissions'] = get_role_config(user.tenant_id, user.role,
+        response['effective_permissions'] = get_role_config(active_tenant_id, user.role,
             tenant.feature_overrides if tenant else None
         )
     response['businesses'] = _business_list(_get_user_businesses(user))
