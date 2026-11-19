@@ -417,9 +417,9 @@ export default function SalonBilling() {
           <span className="text-xs text-amber-600">Prices shown for this outlet</span>
         </div>
       )}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
       {/* Left — service picker */}
-      <div className="flex-1 flex flex-col overflow-hidden border-r border-gray-200">
+      <div className="flex-1 flex flex-col overflow-hidden border-b md:border-b-0 md:border-r border-gray-200">
         {/* Tabs + search */}
         <div className="p-4 border-b border-gray-100 space-y-3">
           <div className="flex gap-2">
@@ -486,7 +486,7 @@ export default function SalonBilling() {
       </div>
 
       {/* Right — cart */}
-      <div className="w-80 flex flex-col bg-white">
+      <div className="w-full md:w-80 flex flex-col bg-white max-h-72 md:max-h-none">
         <div className="p-4 border-b border-gray-100">
           <h2 className="font-semibold text-gray-900">Bill Items</h2>
           <p className="text-xs text-gray-400 mt-0.5">{cart.length} item{cart.length !== 1 ? 's' : ''}</p>
@@ -506,15 +506,15 @@ export default function SalonBilling() {
                     <p className="text-xs text-gray-500">{formatCurrency(item.price)} × {item.qty}</p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => changeQty(item.cartKey, -1)} className="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center">
-                      <Minus size={10} />
+                    <button onClick={() => changeQty(item.cartKey, -1)} className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center">
+                      <Minus size={12} />
                     </button>
                     <span className="text-sm w-5 text-center">{item.qty}</span>
-                    <button onClick={() => changeQty(item.cartKey, 1)} className="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center">
-                      <Plus size={10} />
+                    <button onClick={() => changeQty(item.cartKey, 1)} className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center">
+                      <Plus size={12} />
                     </button>
-                    <button onClick={() => removeFromCart(item.cartKey)} className="w-6 h-6 rounded-full text-red-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center ml-1">
-                      <Trash2 size={11} />
+                    <button onClick={() => removeFromCart(item.cartKey)} className="w-8 h-8 rounded-full text-red-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center ml-1">
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>

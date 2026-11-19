@@ -146,7 +146,7 @@ export default function SalonReports() {
             {outlets.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
         )}
-        <div className="flex bg-white rounded-lg border border-gray-200 p-0.5">
+        <div className="flex bg-white rounded-lg border border-gray-200 p-0.5 overflow-x-auto">
           {TABS.map(t => (
             <button
               key={t}
