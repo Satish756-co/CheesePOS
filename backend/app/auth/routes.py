@@ -50,7 +50,7 @@ def _build_login_response(user, tenant_id):
         'tv': user.token_version,
     }
     access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
-    refresh_token = create_refresh_token(identity=str(user.id))
+    refresh_token = create_refresh_token(identity=str(user.id), additional_claims={'tv': user.token_version})
     tenant = Tenant.query.get(tenant_id) if tenant_id else None
     businesses = _business_list(_get_user_businesses(user))
     return {
@@ -151,7 +151,7 @@ def login():
     }
 
     access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
-    refresh_token = create_refresh_token(identity=str(user.id))
+    refresh_token = create_refresh_token(identity=str(user.id), additional_claims={'tv': user.token_version})
 
     log_audit(user.id, 'user.login', tenant_id=user.tenant_id)
     db.session.commit()
@@ -175,6 +175,10 @@ def refresh():
     user = User.query.get(int(user_id))
     if not user or not user.is_active:
         return jsonify({'error': 'User not found or deactivated'}), 401
+
+    claims = get_jwt()
+    if claims.get('tv') != (user.token_version or 0):
+        return jsonify({'error': 'Session expired. Please log in again.'}), 401
 
     additional_claims = {
         'tenant_id': user.tenant_id,
@@ -303,7 +307,7 @@ def change_password():
         'tv': user.token_version,
     }
     new_access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
-    new_refresh_token = create_refresh_token(identity=str(user.id))
+    new_refresh_token = create_refresh_token(identity=str(user.id), additional_claims={'tv': user.token_version})
 
     return jsonify({
         'message': 'Password changed successfully',
@@ -455,3 +459,18 @@ def set_initial_password():
         'refresh_token': refresh_token,
         'user': user.to_dict(),
     })
+
+
+@auth_bp.route('/accept-terms', methods=['POST'])
+@jwt_required()
+def accept_terms():
+    from datetime import datetime
+    user_id = get_jwt_identity()
+    user = User.query.get(int(user_id))
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    if user.terms_accepted_at:
+        return jsonify({'message': 'Terms already accepted', 'user': user.to_dict()}), 200
+    user.terms_accepted_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({'message': 'Terms accepted', 'user': user.to_dict()})

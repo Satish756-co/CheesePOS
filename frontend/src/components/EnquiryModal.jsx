@@ -21,6 +21,10 @@ export default function EnquiryModal({ onClose }) {
     email: '',
     phone: '',
     business_type: 'bar_restaurant',
+    city: '',
+    state: '',
+    country: 'India',
+    pincode: '',
     description: '',
   })
   const [loading, setLoading] = useState(false)
@@ -92,13 +96,14 @@ export default function EnquiryModal({ onClose }) {
               </div>
 
               <div>
-                <label className="label">Owner Name <span className="text-gray-400 font-normal">(optional)</span></label>
+                <label className="label">Owner Name <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   className="input"
                   placeholder="Your full name"
                   value={form.owner_name}
                   onChange={e => set('owner_name', e.target.value)}
+                  required
                 />
               </div>
 
@@ -126,14 +131,67 @@ export default function EnquiryModal({ onClose }) {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">City <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="e.g. Mumbai"
+                    value={form.city}
+                    onChange={e => set('city', e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">State <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="e.g. Maharashtra"
+                    value={form.state}
+                    onChange={e => set('state', e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Country <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="e.g. India"
+                    value={form.country}
+                    onChange={e => set('country', e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">Pincode <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="e.g. 400001"
+                    value={form.pincode}
+                    onChange={e => set('pincode', e.target.value)}
+                    required
+                    pattern="\d{6}"
+                    title="6-digit pincode"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="label">Message <span className="text-gray-400 font-normal">(optional)</span></label>
+                <label className="label">Message <span className="text-red-500">*</span></label>
                 <textarea
                   className="input resize-none"
                   rows={3}
                   placeholder="Tell us about your business — number of outlets, staff size, anything else..."
                   value={form.description}
                   onChange={e => set('description', e.target.value)}
+                  required
                 />
               </div>
 

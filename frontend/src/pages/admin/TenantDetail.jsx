@@ -5,6 +5,7 @@ import { formatCurrency, formatDate } from '@/utils/formatters'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Building2, Users, Store, CreditCard, X, Sliders, AlertTriangle, Clock, RotateCcw, Trash2, KeyRound, Copy, ToggleLeft, ToggleRight } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { BUSINESS_CONFIG } from '@/config/businessConfig'
 
 const BUSINESS_TYPE_LABELS = {
   bar_restaurant: 'Bar & Restaurant',
@@ -272,28 +273,11 @@ function AdminResetDataSection({ tenantId }) {
   )
 }
 
-const FEATURE_LIST = [
-  { key: 'dashboard',     label: 'Dashboard & Daily Summary' },
-  { key: 'billing',       label: 'Counter Billing' },
-  { key: 'table_billing', label: 'Table Billing' },
-  { key: 'tables',        label: 'Tables' },
-  { key: 'orders',        label: 'Orders' },
-  { key: 'kot',           label: 'Kitchen / KOT' },
-  { key: 'sales_log',     label: 'Sales Log' },
-  { key: 'products',      label: 'Products' },
-  { key: 'inventory',     label: 'Inventory' },
-  { key: 'purchases',     label: 'Purchases' },
-  { key: 'expenses',      label: 'Expenses' },
-  { key: 'reports',       label: 'Reports' },
-  { key: 'users',         label: 'Users & Roles' },
-  { key: 'roles',         label: 'Role Permissions' },
-  { key: 'outlets',       label: 'Outlets' },
-  { key: 'support',       label: 'Support' },
-]
-
-function FeatureOverridesSection({ tenantId, currentOverrides, onSaved }) {
+function FeatureOverridesSection({ tenantId, currentOverrides, onSaved, businessType }) {
   const qc = useQueryClient()
   const [overrides, setOverrides] = useState(() => currentOverrides || {})
+
+  const featureList = BUSINESS_CONFIG[businessType]?.featureList || []
 
   const isDisabled = (key) => overrides[key] === false
 
@@ -330,7 +314,7 @@ function FeatureOverridesSection({ tenantId, currentOverrides, onSaved }) {
         <p className="text-xs text-gray-400">Toggle off to hide tab from this customer</p>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
-        {FEATURE_LIST.map(({ key, label }) => {
+        {featureList.map(({ key, label }) => {
           const off = isDisabled(key)
           return (
             <button
@@ -599,6 +583,7 @@ export default function AdminTenantDetail() {
           <FeatureOverridesSection
             tenantId={parseInt(id)}
             currentOverrides={tenant.feature_overrides}
+            businessType={tenant.business_type}
             onSaved={() => qc.invalidateQueries({ queryKey: ['admin-tenant', id] })}
           />
         <AdminResetDataSection tenantId={parseInt(id)} />

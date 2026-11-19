@@ -3,21 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usersAPI, outletsAPI } from '@/api'
 import { formatDate } from '@/utils/formatters'
 import { useAuthStore } from '@/store/authStore'
+import { BUSINESS_CONFIG } from '@/config/businessConfig'
 import toast from 'react-hot-toast'
 import { Plus, Edit2, X, User, Shield, Eye, EyeOff } from 'lucide-react'
 
-const ROLES = [
-  { value: 'owner', label: 'Owner', color: 'badge-orange' },
-  { value: 'admin', label: 'Admin', color: 'badge-red' },
-  { value: 'manager', label: 'Manager', color: 'badge-blue' },
-  { value: 'cashier', label: 'Cashier', color: 'badge-green' },
-  { value: 'waiter', label: 'Waiter', color: 'badge-blue' },
-  { value: 'kitchen', label: 'Kitchen', color: 'badge-yellow' },
-  { value: 'inventory_manager', label: 'Inventory Mgr', color: 'badge-gray' },
-  { value: 'accountant', label: 'Accountant', color: 'badge-gray' },
-]
-
-function UserModal({ user, outlets, onClose, onSave }) {
+function UserModal({ user, outlets, roles, onClose, onSave }) {
   const [form, setForm] = useState(user ? {
     first_name: user.first_name,
     last_name: user.last_name,
@@ -86,7 +76,7 @@ function UserModal({ user, outlets, onClose, onSave }) {
             <div>
               <label className="label">Role *</label>
               <select className="input" value={form.role} onChange={e => u('role', e.target.value)}>
-                {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                {roles.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
             </div>
           </div>
@@ -148,7 +138,12 @@ function UserModal({ user, outlets, onClose, onSave }) {
 
 export default function Users() {
   const qc = useQueryClient()
-  const currentUserId = useAuthStore(s => s.user?.id)
+  const { user: currentUser, tenant } = useAuthStore()
+  const currentUserId = currentUser?.id
+
+  const bizConfig = BUSINESS_CONFIG[tenant?.business_type] || {}
+  const ROLES = (bizConfig.roles || []).map(r => ({ value: r.key, label: r.label, color: r.color || 'badge-gray' }))
+
   const [showModal, setShowModal] = useState(false)
   const [editUser, setEditUser] = useState(null)
 
@@ -279,6 +274,7 @@ export default function Users() {
         <UserModal
           user={editUser}
           outlets={outlets}
+          roles={ROLES}
           onClose={() => setShowModal(false)}
           onSave={data => editUser
             ? updateUser.mutateAsync({ id: editUser.id, data })

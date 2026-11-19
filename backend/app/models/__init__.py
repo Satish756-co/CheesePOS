@@ -10,6 +10,12 @@ from app.models.inventory import (
 )
 from app.models.support import SupportTicket, TicketMessage
 from app.models.onboarding import OnboardingRequest, BUSINESS_TYPES, BUSINESS_TYPE_LABELS
+from app.models.salon import (
+    SalonServiceCategory, SalonService, SalonPackage, SalonPackageService,
+    SalonCoupon, SalonBill, SalonBillItem,
+    SalonServiceOutletPrice, SalonPackageOutletPrice,
+    SalonBillCancelRequest,
+)
 
 __all__ = [
     'TimestampMixin', 'generate_uuid',
@@ -22,4 +28,8 @@ __all__ = [
     'InventoryLedger', 'StockBalance', 'StockTransfer', 'StockTransferItem', 'Expense',
     'SupportTicket', 'TicketMessage',
     'OnboardingRequest', 'BUSINESS_TYPES', 'BUSINESS_TYPE_LABELS',
+    'SalonServiceCategory', 'SalonService', 'SalonPackage', 'SalonPackageService',
+    'SalonCoupon', 'SalonBill', 'SalonBillItem',
+    'SalonServiceOutletPrice', 'SalonPackageOutletPrice',
+    'SalonBillCancelRequest',
 ]

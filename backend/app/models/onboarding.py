@@ -35,6 +35,10 @@ class OnboardingRequest(db.Model, TimestampMixin):
     phone = db.Column(db.String(20), nullable=False)
     business_type = db.Column(db.String(50), default='bar_restaurant')
     description = db.Column(db.Text)
+    city = db.Column(db.String(100))
+    state = db.Column(db.String(100))
+    country = db.Column(db.String(100))
+    pincode = db.Column(db.String(10))
     status = db.Column(db.String(20), default='pending')  # pending | approved | rejected
     rejection_reason = db.Column(db.Text)
     reviewed_at = db.Column(db.DateTime)
@@ -51,6 +55,10 @@ class OnboardingRequest(db.Model, TimestampMixin):
             'business_type': self.business_type,
             'business_type_label': BUSINESS_TYPE_LABELS.get(self.business_type, self.business_type),
             'description': self.description,
+            'city': self.city,
+            'state': self.state,
+            'country': self.country,
+            'pincode': self.pincode,
             'status': self.status,
             'rejection_reason': self.rejection_reason,
             'reviewed_at': self.reviewed_at.isoformat() if self.reviewed_at else None,

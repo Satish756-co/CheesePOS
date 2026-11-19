@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 from datetime import date
+from sqlalchemy import func
 from app.extensions import db
-from app.models import Expense
+from app.models import Expense, get_role_config, User, Outlet
 from app.auth.decorators import tenant_required
 
 expenses_bp = Blueprint('expenses', __name__)
@@ -19,6 +20,7 @@ EXPENSE_CATEGORIES = [
 def list_expenses():
     claims = get_jwt()
     tenant_id = claims.get('tenant_id')
+    user_id = int(get_jwt_identity())
     outlet_id = request.args.get('outlet_id', type=int)
     category = request.args.get('category')
     date_from = request.args.get('date_from')
@@ -26,6 +28,16 @@ def list_expenses():
     page = request.args.get('page', 1, type=int)
 
     q = Expense.query.filter_by(tenant_id=tenant_id).filter(Expense.reset_batch_id.is_(None))
+
+    # Enforce data_scope (outlet filter only — expenses are business-level records)
+    current_user = User.query.get(user_id)
+    if current_user and current_user.role not in ('owner', 'admin'):
+        role_cfg = get_role_config(tenant_id, current_user.role)
+        if role_cfg.get('data_scope') == 'outlet':
+            assigned = current_user.outlet_ids or []
+            if assigned:
+                q = q.filter(Expense.outlet_id.in_(assigned))
+
     if outlet_id:
         q = q.filter_by(outlet_id=outlet_id)
     if category:
@@ -35,9 +47,11 @@ def list_expenses():
     if date_to:
         q = q.filter(Expense.expense_date <= date.fromisoformat(date_to))
 
+    total_amount = q.with_entities(func.sum(Expense.amount)).scalar()
+    total = float(total_amount or 0)
+
     pagination = q.order_by(Expense.expense_date.desc()).paginate(page=page, per_page=30, error_out=False)
 
-    total = sum(float(e.amount) for e in pagination.items)
     return jsonify({
         'expenses': [e.to_dict() for e in pagination.items],
         'total': pagination.total,
@@ -59,6 +73,16 @@ def create_expense():
     if not data or not data.get('outlet_id') or not data.get('category') or not data.get('description') or data.get('amount') is None:
         return jsonify({'error': 'outlet_id, category, description, and amount are required'}), 400
 
+    if data['category'] not in EXPENSE_CATEGORIES:
+        return jsonify({'error': f'Invalid category. Must be one of: {", ".join(EXPENSE_CATEGORIES)}'}), 400
+
+    if float(data['amount']) <= 0:
+        return jsonify({'error': 'Amount must be greater than zero'}), 400
+
+    outlet = Outlet.query.filter_by(id=data['outlet_id'], tenant_id=tenant_id).first()
+    if not outlet:
+        return jsonify({'error': 'Invalid outlet'}), 404
+
     expense = Expense(
         tenant_id=tenant_id,
         outlet_id=data['outlet_id'],
@@ -68,6 +92,7 @@ def create_expense():
         amount=data['amount'],
         payment_mode=data.get('payment_mode', 'cash'),
         reference_number=data.get('reference_number'),
+        staff_id=data.get('staff_id') or None,
         recorded_by=user_id,
         status='approved',
     )
@@ -88,6 +113,8 @@ def update_expense(expense_id):
     for field in ['category', 'description', 'amount', 'payment_mode', 'status']:
         if field in data:
             setattr(expense, field, data[field])
+    if 'staff_id' in data:
+        expense.staff_id = data['staff_id'] or None
 
     db.session.commit()
     return jsonify(expense.to_dict())

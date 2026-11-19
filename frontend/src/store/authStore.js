@@ -1,19 +1,24 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import api from '@/api/client'
-// Fallback hardcoded map used when effectivePermissions hasn't loaded yet
-const FALLBACK_ROLE_PAGES = {
-  owner: ['*'],
-  admin: ['dashboard', 'billing', 'table_billing', 'orders', 'tables', 'sales_log',
-          'kot', 'products', 'inventory', 'purchases', 'expenses', 'reports', 'users', 'roles', 'outlets'],
-  manager: ['dashboard', 'billing', 'table_billing', 'orders', 'tables', 'sales_log',
-             'kot', 'inventory', 'expenses', 'reports'],
-  cashier: ['dashboard', 'billing', 'table_billing', 'sales_log'],
-  waiter: ['dashboard', 'table_billing', 'orders', 'tables'],
-  kitchen: ['dashboard', 'kot'],
-  inventory_manager: ['dashboard', 'products', 'inventory', 'purchases'],
-  accountant: ['dashboard', 'expenses', 'reports', 'sales_log'],
+import { BUSINESS_CONFIG } from '@/config/businessConfig'
+
+// Derive FALLBACK_ROLE_PAGES by unioning pages from every business type config.
+// This is used only before effectivePermissions loads from the backend.
+function buildFallbackRolePages() {
+  const result = { owner: ['*'] }
+  const roles = ['admin', 'manager', 'cashier', 'waiter', 'kitchen', 'inventory_manager', 'accountant']
+  for (const role of roles) {
+    const pageSet = new Set()
+    for (const config of Object.values(BUSINESS_CONFIG)) {
+      for (const p of config.fallbackPages?.[role] || []) pageSet.add(p)
+    }
+    result[role] = [...pageSet]
+  }
+  return result
 }
+
+const FALLBACK_ROLE_PAGES = buildFallbackRolePages()
 
 export const useAuthStore = create(
   persist(
@@ -41,6 +46,12 @@ export const useAuthStore = create(
         try {
           const res = await api.get('/auth/me')
           const data = res.data
+          // Guard against race: if the response's tenant differs from the current
+          // tenant (e.g. switchBusiness fired while this request was in-flight),
+          // discard the stale response rather than overwriting the new tenant.
+          const currentTenantId = get().tenant?.id
+          const freshTenantId = data.tenant?.id
+          if (currentTenantId && freshTenantId && currentTenantId !== freshTenantId) return
           set({
             user: data.user ?? get().user,
             tenant: data.tenant ?? get().tenant,
@@ -139,25 +150,11 @@ export const useAuthStore = create(
         if (!user) return '/login'
         if (user.is_super_admin) return '/admin/dashboard'
 
-        const ORDERED_PAGES = [
-          { path: '/app/dashboard',    permission: 'dashboard' },
-          { path: '/app/table-billing',permission: 'table_billing' },
-          { path: '/app/billing',      permission: 'billing' },
-          { path: '/app/orders',       permission: 'orders' },
-          { path: '/app/tables',       permission: 'tables' },
-          { path: '/app/kot',          permission: 'kot' },
-          { path: '/app/sales-log',    permission: 'sales_log' },
-          { path: '/app/inventory',    permission: 'inventory' },
-          { path: '/app/products',     permission: 'products' },
-          { path: '/app/purchases',    permission: 'purchases' },
-          { path: '/app/expenses',     permission: 'expenses' },
-          { path: '/app/reports',      permission: 'reports' },
-          { path: '/app/users',        permission: 'users' },
-          { path: '/app/roles',        permission: 'roles' },
-          { path: '/app/outlets',      permission: 'outlets' },
-        ]
+        const businessType = state.tenant?.business_type
 
-        for (const { path, permission } of ORDERED_PAGES) {
+        const orderedPages = BUSINESS_CONFIG[businessType]?.orderedPages || []
+
+        for (const { path, permission } of orderedPages) {
           if (state.hasPermission(permission)) return path
         }
         return '/app/settings'

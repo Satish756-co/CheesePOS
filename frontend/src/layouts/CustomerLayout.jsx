@@ -1,67 +1,59 @@
 import { useState, useEffect } from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  LayoutDashboard, Receipt, Table2, ShoppingCart, ChefHat,
-  Package, Warehouse, Truck, TrendingDown, BarChart2, Users,
-  Settings, LogOut, Menu, X, Store, ClipboardList, Shield, CalendarDays, Headphones,
-  ChevronDown, Building2
+  LayoutDashboard, TrendingDown, Users, Settings, LogOut,
+  Menu, X, Store, Shield, Headphones, ChevronDown, Building2,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
-import { authAPI, supportAPI } from '@/api'
+import { authAPI, supportAPI, salonAPI } from '@/api'
 import BrandLogo from '@/components/BrandLogo'
+import { BUSINESS_CONFIG } from '@/config/businessConfig'
 
-const navItems = [
-  { to: '/app/dashboard',    icon: LayoutDashboard, label: 'Dashboard',       permission: 'dashboard' },
-  { to: '/app/daily',        icon: CalendarDays,    label: 'Daily Summary',   permission: 'dashboard' },
-  { to: '/app/billing',      icon: Receipt,         label: 'Counter Billing', permission: 'billing' },
-  { to: '/app/table-billing',icon: Table2,          label: 'Table Billing',   permission: 'table_billing' },
-  { to: '/app/tables',       icon: Table2,          label: 'Tables',          permission: 'tables' },
-  { to: '/app/orders',       icon: ShoppingCart,    label: 'Orders',          permission: 'orders' },
-  { to: '/app/sales-log',    icon: ClipboardList,   label: 'Sales Log',       permission: 'sales_log' },
-  { to: '/app/kot',          icon: ChefHat,         label: 'Kitchen / KOT',   permission: 'kot' },
-  { to: '/app/products',     icon: Package,         label: 'Products',        permission: 'products' },
-  { to: '/app/inventory',    icon: Warehouse,       label: 'Inventory',       permission: 'inventory' },
-  { to: '/app/purchases',    icon: Truck,           label: 'Purchases',       permission: 'purchases' },
-  { to: '/app/expenses',     icon: TrendingDown,    label: 'Expenses',        permission: 'expenses' },
-  { to: '/app/reports',      icon: BarChart2,       label: 'Reports',         permission: 'reports' },
-  { to: '/app/users',        icon: Users,           label: 'Users & Roles',   permission: 'users' },
-  { to: '/app/roles',        icon: Shield,          label: 'Role Permissions',permission: 'roles' },
-  { to: '/app/outlets',      icon: Store,           label: 'Outlets',         permission: 'outlets' },
-  { to: '/app/settings',     icon: Settings,        label: 'Settings',        permission: null },
-  { to: '/app/support',      icon: Headphones,      label: 'Support',         permission: 'support' },
+// Universal nav items shown for all business types
+const UNIVERSAL_NAV = [
+  { to: '/app/dashboard', icon: LayoutDashboard, label: 'Dashboard',        permission: 'dashboard' },
+  { to: '/app/expenses',  icon: TrendingDown,    label: 'Expenses',         permission: 'expenses' },
+  { to: '/app/users',     icon: Users,           label: 'Users & Roles',    permission: 'users' },
+  { to: '/app/roles',     icon: Shield,          label: 'Role Permissions', permission: 'roles' },
+  { to: '/app/outlets',   icon: Store,           label: 'Outlets',          permission: 'outlets' },
+  { to: '/app/settings',  icon: Settings,        label: 'Settings',         permission: null },
+  { to: '/app/support',   icon: Headphones,      label: 'Support',          permission: 'support' },
 ]
 
-function SidebarNav({ items, supportBadge, sidebarOpen, onNavigate }) {
+function SidebarNav({ items, badges = {}, sidebarOpen, onNavigate }) {
   return (
     <nav className="flex-1 py-4 overflow-y-auto sidebar-scroll">
-      {items.map(({ to, icon: Icon, label }) => (
-        <NavLink
-          key={to}
-          to={to}
-          onClick={onNavigate}
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-colors mb-0.5
-            ${isActive
-              ? 'bg-sidebar-active text-white'
-              : 'text-sidebar-text hover:bg-sidebar-hover hover:text-white'
-            }`
-          }
-        >
-          <div className="relative flex-shrink-0">
-            <Icon size={18} />
-            {to === '/app/support' && supportBadge > 0 && !sidebarOpen && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+      {items.map(({ to, icon: Icon, label }) => {
+        const badgeCount = badges[to] || 0
+        return (
+          <NavLink
+            key={to}
+            to={to}
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-colors mb-0.5
+              ${isActive
+                ? 'bg-sidebar-active text-white'
+                : 'text-sidebar-text hover:bg-sidebar-hover hover:text-white'
+              }`
+            }
+          >
+            <div className="relative flex-shrink-0">
+              <Icon size={18} />
+              {badgeCount > 0 && !sidebarOpen && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+              )}
+            </div>
+            {sidebarOpen && <span className="text-sm font-medium truncate flex-1">{label}</span>}
+            {sidebarOpen && badgeCount > 0 && (
+              <span className="bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">
+                {badgeCount > 9 ? '9+' : badgeCount}
+              </span>
             )}
-          </div>
-          {sidebarOpen && <span className="text-sm font-medium truncate flex-1">{label}</span>}
-          {sidebarOpen && to === '/app/support' && supportBadge > 0 && (
-            <span className="bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">
-              {supportBadge > 9 ? '9+' : supportBadge}
-            </span>
-          )}
-        </NavLink>
-      ))}
+          </NavLink>
+        )
+      })}
     </nav>
   )
 }
@@ -73,6 +65,7 @@ export default function CustomerLayout() {
   const [switching, setSwitching] = useState(false)
   const { user, tenant, token, logout, hasPermission, refreshPermissions, businesses, switchBusiness } = useAuthStore()
   const navigate = useNavigate()
+  const qc = useQueryClient()
 
   const { data: unreadData } = useQuery({
     queryKey: ['support-unread-count'],
@@ -81,6 +74,21 @@ export default function CustomerLayout() {
     enabled: !!token,
   })
   const supportBadge = unreadData?.count || 0
+
+  const isSalon = tenant?.business_type === 'saloon'
+  const isManager = ['owner', 'admin', 'manager'].includes(user?.role)
+  const { data: cancelReqData = [] } = useQuery({
+    queryKey: ['salon-cancel-requests', tenant?.id, 'pending'],
+    queryFn: () => salonAPI.listCancelRequests({ status: 'pending' }).then(r => r.data),
+    refetchInterval: 12000,
+    enabled: !!token && isSalon && isManager,
+  })
+  const cancelBadge = cancelReqData.length
+
+  const badges = {
+    '/app/support': supportBadge,
+    ...(cancelBadge > 0 ? { '/app/salon/bills': cancelBadge } : {}),
+  }
 
   useEffect(() => {
     refreshPermissions()
@@ -107,6 +115,7 @@ export default function CustomerLayout() {
     setSwitching(true)
     try {
       await switchBusiness(tenantId)
+      qc.clear()
       setSwitcherOpen(false)
       navigate(useAuthStore.getState().getHomeRoute(), { replace: true })
     } catch {
@@ -163,7 +172,11 @@ export default function CustomerLayout() {
     )
   }
 
-  const visibleItems = navItems.filter(item => item.permission === null || hasPermission(item.permission))
+  const bizNavItems = BUSINESS_CONFIG[tenant?.business_type]?.navItems || []
+  const allNavItems = [...UNIVERSAL_NAV, ...bizNavItems]
+  const visibleItems = allNavItems.filter(item =>
+    item.permission === null || hasPermission(item.permission)
+  )
 
   const UserFooter = ({ expanded }) => (
     <div className="border-t border-sidebar-border p-4 flex-shrink-0">
@@ -187,6 +200,11 @@ export default function CustomerLayout() {
           <LogOut size={18} />
         </button>
       )}
+      {expanded && (
+        <Link to="/app/terms" className="block mt-2 text-center text-[10px] text-sidebar-text hover:text-white transition-colors opacity-50 hover:opacity-100">
+          Terms of Service
+        </Link>
+      )}
     </div>
   )
 
@@ -198,7 +216,7 @@ export default function CustomerLayout() {
         <div className="border-b border-sidebar-border flex-shrink-0">
           <BusinessHeader expanded={sidebarOpen} />
         </div>
-        <SidebarNav items={visibleItems} supportBadge={supportBadge} sidebarOpen={sidebarOpen} onNavigate={() => {}} />
+        <SidebarNav items={visibleItems} badges={badges} sidebarOpen={sidebarOpen} onNavigate={() => {}} />
         <UserFooter expanded={sidebarOpen} />
       </aside>
 
@@ -239,7 +257,7 @@ export default function CustomerLayout() {
             </div>
           </div>
         )}
-        <SidebarNav items={visibleItems} supportBadge={supportBadge} sidebarOpen={true} onNavigate={() => setMobileOpen(false)} />
+        <SidebarNav items={visibleItems} badges={badges} sidebarOpen={true} onNavigate={() => setMobileOpen(false)} />
         <UserFooter expanded={true} />
       </aside>
 

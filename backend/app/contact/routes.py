@@ -29,9 +29,15 @@ def submit_enquiry():
     phone = data.get('phone', '').strip()
     description = data.get('description', '').strip()
     business_type = data.get('business_type', 'bar_restaurant').strip()
+    city    = data.get('city', '').strip()
+    state   = data.get('state', '').strip()
+    country = data.get('country', '').strip()
+    pincode = data.get('pincode', '').strip()
 
-    if not business_name or not email or not phone:
-        return jsonify({'error': 'Business name, email and phone are required'}), 400
+    if not business_name or not owner_name or not email or not phone or not description:
+        return jsonify({'error': 'Business name, owner name, email, phone and message are required'}), 400
+    if not city or not state or not country or not pincode:
+        return jsonify({'error': 'City, state, country and pincode are required'}), 400
 
     if business_type not in BUSINESS_TYPES:
         business_type = 'other'
@@ -39,11 +45,15 @@ def submit_enquiry():
     # Store as onboarding request
     req = OnboardingRequest(
         business_name=business_name,
-        owner_name=owner_name or None,
+        owner_name=owner_name,
         email=email,
         phone=phone,
         business_type=business_type,
         description=description,
+        city=city,
+        state=state,
+        country=country,
+        pincode=pincode,
         status='pending',
     )
     db.session.add(req)
@@ -82,6 +92,10 @@ def submit_enquiry():
             <tr style="border-bottom:1px solid #f3f4f6">
               <td style="padding:10px 0;color:#6b7280">Phone</td>
               <td style="padding:10px 0;color:#111827">{html_mod.escape(phone)}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #f3f4f6">
+              <td style="padding:10px 0;color:#6b7280">Location</td>
+              <td style="padding:10px 0;color:#111827">{html_mod.escape(city)}, {html_mod.escape(state)} - {html_mod.escape(pincode)}, {html_mod.escape(country)}</td>
             </tr>
             <tr>
               <td style="padding:10px 0;color:#6b7280;vertical-align:top">Message</td>
