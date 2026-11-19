@@ -52,6 +52,7 @@ class Tenant(db.Model, TimestampMixin):
     city = db.Column(db.String(100))
     state = db.Column(db.String(100))
     pincode = db.Column(db.String(10))
+    country = db.Column(db.String(100))
     logo_url = db.Column(db.String(500))
     status = db.Column(db.String(20), default='trial')  # trial, active, suspended, expired, cancelled
     is_verified = db.Column(db.Boolean, default=False)
@@ -82,6 +83,8 @@ class Tenant(db.Model, TimestampMixin):
             'gstin': self.gstin,
             'city': self.city,
             'state': self.state,
+            'pincode': self.pincode,
+            'country': self.country,
             'status': self.status,
             'is_verified': self.is_verified,
             'trial_ends_at': self.trial_ends_at.isoformat() if self.trial_ends_at else None,

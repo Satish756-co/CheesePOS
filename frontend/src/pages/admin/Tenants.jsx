@@ -182,6 +182,12 @@ export default function AdminTenants() {
     onError: (e) => toast.error(e?.response?.data?.error || 'Failed to reactivate'),
   })
 
+  const forceDelete = useMutation({
+    mutationFn: (id) => adminAPI.forceDeleteTenant(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-tenants'] }); toast.success('Tenant permanently deleted') },
+    onError: (e) => toast.error(e?.response?.data?.error || 'Failed to delete'),
+  })
+
   const handleCreated = () => {
     setShowCreate(false)
     qc.invalidateQueries({ queryKey: ['admin-tenants'] })
@@ -305,15 +311,30 @@ export default function AdminTenants() {
                         <Eye size={16} />
                       </button>
                       {isPendingDeletion ? (
-                        <button
-                          onClick={() => reactivate.mutate(t.id)}
-                          disabled={reactivate.isPending}
-                          className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
-                          title="Reactivate customer"
-                        >
-                          <RotateCcw size={13} />
-                          Reactivate
-                        </button>
+                        <>
+                          <button
+                            onClick={() => reactivate.mutate(t.id)}
+                            disabled={reactivate.isPending}
+                            className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
+                            title="Reactivate customer"
+                          >
+                            <RotateCcw size={13} />
+                            Reactivate
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Permanently delete "${t.business_name}" right now? This cannot be undone.`)) {
+                                forceDelete.mutate(t.id)
+                              }
+                            }}
+                            disabled={forceDelete.isPending}
+                            className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
+                            title="Delete immediately"
+                          >
+                            <Trash2 size={13} />
+                            Delete Now
+                          </button>
+                        </>
                       ) : (
                         <>
                           {t.status === 'trial' && (
