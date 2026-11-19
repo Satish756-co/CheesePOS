@@ -787,6 +787,7 @@ def _hard_purge_tenant(tenant):
         "DELETE FROM expenses WHERE tenant_id = :tid",
         "DELETE FROM audit_logs WHERE tenant_id = :tid",
         "DELETE FROM user_outlets WHERE user_id IN (SELECT id FROM users WHERE tenant_id = :tid)",
+        "DELETE FROM user_tenant_access WHERE tenant_id = :tid",
         "DELETE FROM users WHERE tenant_id = :tid",
         "DELETE FROM products WHERE tenant_id = :tid",
         "DELETE FROM outlets WHERE tenant_id = :tid",
@@ -800,12 +801,8 @@ def _hard_purge_tenant(tenant):
             db.session.execute(db.text(stmt), {'tid': tid})
         except Exception as e:
             current_app.logger.warning(f'Purge: {stmt} → {e}')
-    try:
-        db.session.delete(tenant)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f'Failed to delete tenant {tid}: {e}')
+    db.session.delete(tenant)
+    db.session.commit()
 
 
 # ─── Create customer ─────────────────────────────────────────────────────────
@@ -977,8 +974,12 @@ def force_delete_tenant(tenant_id):
     tenant = Tenant.query.get_or_404(tenant_id)
     if tenant.deletion_status != 'pending_deletion':
         return jsonify({'error': 'Tenant is not in pending_deletion state'}), 400
-    _hard_purge_tenant(tenant)
-    db.session.commit()
+    try:
+        _hard_purge_tenant(tenant)
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'force_delete_tenant {tenant_id}: {e}')
+        return jsonify({'error': 'Failed to delete tenant — check server logs'}), 500
     return jsonify({'message': 'Tenant permanently deleted'})
 
 
