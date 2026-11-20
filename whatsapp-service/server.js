@@ -46,9 +46,10 @@ function getOrCreate(tenantId) {
       clientId: `tenant_${key}`,
       dataPath: './sessions',
     }),
+    authTimeoutMs: 0,  // no timeout — CDN can be slow or blocked on cloud servers
     webVersionCache: {
-      type: 'local',
-      path: './sessions/wa-cache',
+      type: 'remote',
+      remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/',
     },
     puppeteer: {
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
