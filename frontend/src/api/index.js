@@ -250,3 +250,9 @@ export const salonAPI = {
   getReportsDaily:    (params)   => api.get('/salon/reports/daily', { params }),
   getReportsServices: (params)   => api.get('/salon/reports/services', { params }),
 }
+
+export const whatsappAPI = {
+  getStatus:  ()     => api.get('/whatsapp/status'),
+  connect:    ()     => api.post('/whatsapp/connect'),
+  disconnect: ()     => api.post('/whatsapp/disconnect'),
+}

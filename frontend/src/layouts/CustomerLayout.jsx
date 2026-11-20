@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   LayoutDashboard, TrendingDown, Users, Settings, LogOut,
-  Menu, X, Store, Shield, Headphones, ChevronDown, Building2,
+  Menu, X, Store, Shield, Headphones, ChevronDown, Building2, Smartphone,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { authAPI, supportAPI, salonAPI } from '@/api'
@@ -18,10 +18,11 @@ const TOP_NAV = [
 // Admin items always last, below business-specific items
 const BOTTOM_NAV = [
   { to: '/app/users',    icon: Users,      label: 'Users & Roles',    permission: 'users' },
-  { to: '/app/roles',    icon: Shield,     label: 'Role Permissions', permission: 'roles' },
-  { to: '/app/outlets',  icon: Store,      label: 'Outlets',          permission: 'outlets' },
-  { to: '/app/settings', icon: Settings,   label: 'Settings',         permission: null },
-  { to: '/app/support',  icon: Headphones, label: 'Support',          permission: 'support' },
+  { to: '/app/roles',     icon: Shield,      label: 'Role Permissions', permission: 'roles' },
+  { to: '/app/outlets',   icon: Store,       label: 'Outlets',          permission: 'outlets' },
+  { to: '/app/whatsapp',  icon: Smartphone,  label: 'WhatsApp',         permission: null },
+  { to: '/app/settings',  icon: Settings,    label: 'Settings',         permission: null },
+  { to: '/app/support',   icon: Headphones,  label: 'Support',          permission: 'support' },
 ]
 
 function SidebarNav({ items, badges = {}, sidebarOpen, onNavigate }) {

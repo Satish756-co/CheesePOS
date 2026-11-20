@@ -569,6 +569,23 @@ def create_bill():
         bi.bill_id = bill.id
         db.session.add(bi)
     db.session.commit()
+
+    # Send WhatsApp bill asynchronously if customer phone provided
+    if bill.customer_phone:
+        try:
+            from app.whatsapp_client import send_message_async, format_salon_bill
+            from app.models import Tenant, Outlet
+            tenant = Tenant.query.get(tenant_id)
+            outlet = Outlet.query.get(bill.outlet_id) if bill.outlet_id else None
+            msg = format_salon_bill(
+                bill,
+                tenant.business_name if tenant else 'CheesePOS',
+                outlet.name if outlet else (tenant.business_name if tenant else 'CheesePOS'),
+            )
+            send_message_async(tenant_id, bill.customer_phone, msg)
+        except Exception as e:
+            current_app.logger.warning(f'WhatsApp bill send skipped: {e}')
+
     return jsonify(bill.to_dict(include_items=True)), 201
 
 

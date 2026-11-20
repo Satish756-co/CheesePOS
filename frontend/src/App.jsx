@@ -37,6 +37,7 @@ import RolePermissions from '@/pages/customer/RolePermissions'
 import Settings from '@/pages/customer/Settings'
 import Outlets from '@/pages/customer/Outlets'
 import CustomerSupport from '@/pages/customer/Support'
+import WhatsAppSettings from '@/pages/customer/WhatsAppSettings'
 import Terms, { TermsContent } from '@/pages/Terms'
 
 // Salon pages
@@ -301,9 +302,10 @@ export default function App() {
         <Route path="users" element={<PermissionRoute permission="users"><Users /></PermissionRoute>} />
         <Route path="roles" element={<PermissionRoute permission="roles"><RolePermissions /></PermissionRoute>} />
         <Route path="outlets" element={<PermissionRoute permission="outlets"><Outlets /></PermissionRoute>} />
-        <Route path="settings" element={<PermissionRoute permission={null}><Settings /></PermissionRoute>} />
-        <Route path="support" element={<PermissionRoute permission={null}><CustomerSupport /></PermissionRoute>} />
-        <Route path="terms"   element={<Terms />} />
+        <Route path="settings"  element={<PermissionRoute permission={null}><Settings /></PermissionRoute>} />
+        <Route path="support"   element={<PermissionRoute permission={null}><CustomerSupport /></PermissionRoute>} />
+        <Route path="whatsapp"  element={<WhatsAppSettings />} />
+        <Route path="terms"     element={<Terms />} />
 
         {/* Salon / Spa routes */}
         <Route path="salon">
