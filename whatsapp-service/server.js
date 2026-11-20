@@ -12,14 +12,14 @@ const sessions = {}
 
 function normalisePhone(phone) {
   const digits = String(phone).replace(/\D/g, '')
-  // If 10 digits assume India, prepend 91
   const full = digits.length === 10 ? '91' + digits : digits
   return full + '@c.us'
 }
 
-// Remove stale Chromium profile locks left by previous (crashed/killed) containers
+// Remove stale Chromium profile locks from the actual session directory path
 function cleanupLocks(key) {
-  const sessionDir = path.join('./sessions', '.wwebjs_auth', `session-tenant_${key}`)
+  // wwebjs v1.x stores sessions at <dataPath>/session-<clientId>/
+  const sessionDir = path.join('./sessions', `session-tenant_${key}`)
   try {
     if (!fs.existsSync(sessionDir)) return
     const walk = (dir) => {
@@ -61,6 +61,7 @@ function getOrCreate(tenantId) {
         '--disable-extensions',
         '--no-first-run',
         '--window-size=1280,800',
+        '--disable-blink-features=AutomationControlled',
       ],
       headless: true,
       defaultViewport: { width: 1280, height: 800 },
@@ -103,10 +104,12 @@ function getOrCreate(tenantId) {
     delete sessions[key]
   })
 
-  client.initialize().catch(err => {
+  client.initialize().catch(async err => {
     console.error(`[${key}] Init error:`, err?.message || err)
     state.status = 'error'
     delete sessions[key]
+    // Destroy the browser process so it doesn't block next attempt
+    try { await client.destroy() } catch (_) {}
   })
 
   return state
