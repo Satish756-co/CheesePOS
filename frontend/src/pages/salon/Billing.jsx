@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Scissors, Plus, Minus, Trash2, Tag, X, Store, ChevronDown } from 'lucide-react'
 import { salonAPI, usersAPI } from '@/api'
@@ -119,14 +119,25 @@ function AvailableCoupons({ coupons, subtotal, onApply, appliedCode }) {
   )
 }
 
-function PaymentModal({ cart, subtotal, onClose, onConfirm, loading, users, outletId, tenant, currentUserId }) {
+function PaymentModal({ cart, subtotal, onClose, onConfirm, loading, users, outletId, tenant, currentUser }) {
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
-  const [staffId, setStaffId] = useState(() => {
-    const activeUsers = (users || []).filter(u => u.is_active)
-    const match = activeUsers.find(u => u.id === currentUserId)
-    return match ? String(match.id) : ''
-  })
+  const [staffId, setStaffId] = useState('')
+
+  // Build staff list: active users + current user if not already in the list
+  const staffList = useMemo(() => {
+    const active = (users || []).filter(u => u.is_active)
+    if (currentUser && !active.find(u => u.id === currentUser.id)) {
+      return [{ id: currentUser.id, full_name: currentUser.full_name }, ...active]
+    }
+    return active
+  }, [users, currentUser])
+
+  useEffect(() => {
+    if (staffId === '' && currentUser) {
+      setStaffId(String(currentUser.id))
+    }
+  }, [staffList])
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [couponCode, setCouponCode] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState(null)
@@ -223,7 +234,7 @@ function PaymentModal({ cart, subtotal, onClose, onConfirm, loading, users, outl
             <label className="label">Staff / Stylist <span className="text-gray-400 text-xs">(optional)</span></label>
             <select className="input" value={staffId} onChange={e => setStaffId(e.target.value)}>
               <option value="">Select staff...</option>
-              {(users || []).filter(u => u.is_active).map(u => (
+              {staffList.map(u => (
                 <option key={u.id} value={u.id}>{u.full_name}</option>
               ))}
             </select>
@@ -549,7 +560,7 @@ export default function SalonBilling() {
           users={users}
           outletId={outletId}
           tenant={tenant}
-          currentUserId={user?.id}
+          currentUser={user}
           loading={createBillMutation.isPending}
           onClose={() => setShowPayment(false)}
           onConfirm={(data) => createBillMutation.mutate(data)}
