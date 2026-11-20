@@ -46,7 +46,8 @@ function getOrCreate(tenantId) {
       clientId: `tenant_${key}`,
       dataPath: './sessions',
     }),
-    authTimeoutMs: 0,  // no timeout — CDN can be slow or blocked on cloud servers
+    authTimeoutMs: 300000,  // 5 minutes — give user time to scan; 0 falls through to 60s default
+    webVersion: '2.3000.1017673279',
     webVersionCache: {
       type: 'remote',
       remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/',
