@@ -16,9 +16,11 @@ COPY package*.json ./
 RUN npm install --omit=dev
 
 COPY server.js .
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
 
 RUN mkdir -p sessions
 
 EXPOSE 3001
 
-CMD ["node", "server.js"]
+CMD ["./entrypoint.sh"]
