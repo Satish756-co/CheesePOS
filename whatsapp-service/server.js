@@ -1,6 +1,8 @@
 const express = require('express')
 const { Client, LocalAuth } = require('whatsapp-web.js')
 const qrcode = require('qrcode')
+const fs = require('fs')
+const path = require('path')
 
 const app = express()
 app.use(express.json())
@@ -15,9 +17,23 @@ function normalisePhone(phone) {
   return full + '@c.us'
 }
 
+// Remove stale Chromium profile locks left by previous (crashed/killed) containers
+function cleanupLocks(key) {
+  const profileDir = path.join('./sessions', '.wwebjs_auth', `session-tenant_${key}`)
+  const locks = [
+    path.join(profileDir, 'Default', 'SingletonLock'),
+    path.join(profileDir, 'SingletonLock'),
+  ]
+  for (const f of locks) {
+    try { fs.unlinkSync(f); console.log(`[${key}] Removed stale lock: ${f}`) } catch (_) {}
+  }
+}
+
 function getOrCreate(tenantId) {
   const key = String(tenantId)
   if (sessions[key]) return sessions[key]
+
+  cleanupLocks(key)
 
   const client = new Client({
     authStrategy: new LocalAuth({
@@ -32,7 +48,6 @@ function getOrCreate(tenantId) {
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--no-zygote',
-        '--single-process',
         '--disable-extensions',
         '--no-first-run',
       ],
@@ -79,6 +94,7 @@ function getOrCreate(tenantId) {
   client.initialize().catch(err => {
     console.error(`[${key}] Init error:`, err?.message || err)
     state.status = 'error'
+    delete sessions[key]
   })
 
   return state
@@ -86,7 +102,6 @@ function getOrCreate(tenantId) {
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
-// Get status (and QR if waiting)
 app.get('/status/:tenantId', (req, res) => {
   const key = String(req.params.tenantId)
   const state = sessions[key]
@@ -94,14 +109,12 @@ app.get('/status/:tenantId', (req, res) => {
   res.json({ status: state.status, qr: state.qr || null })
 })
 
-// Start session / get QR
 app.post('/connect/:tenantId', (req, res) => {
   const key = String(req.params.tenantId)
   const state = getOrCreate(key)
   res.json({ status: state.status, qr: state.qr || null })
 })
 
-// Send a message
 app.post('/send', async (req, res) => {
   const { tenantId, phone, message } = req.body
   if (!tenantId || !phone || !message)
@@ -123,7 +136,6 @@ app.post('/send', async (req, res) => {
   }
 })
 
-// Disconnect a session
 app.delete('/disconnect/:tenantId', async (req, res) => {
   const key = String(req.params.tenantId)
   const state = sessions[key]
@@ -134,7 +146,6 @@ app.delete('/disconnect/:tenantId', async (req, res) => {
   res.json({ success: true })
 })
 
-// Health check
 app.get('/health', (_, res) => res.json({ ok: true, sessions: Object.keys(sessions).length }))
 
 // ── Start ─────────────────────────────────────────────────────────────────────
