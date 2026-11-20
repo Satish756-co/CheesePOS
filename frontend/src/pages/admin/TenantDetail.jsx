@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminAPI } from '@/api'
 import { formatCurrency, formatDate } from '@/utils/formatters'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Building2, Users, Store, CreditCard, X, Sliders, AlertTriangle, Clock, RotateCcw, Trash2, KeyRound, Copy, ToggleLeft, ToggleRight } from 'lucide-react'
+import { ArrowLeft, Building2, Users, Store, CreditCard, X, Sliders, AlertTriangle, Clock, RotateCcw, Trash2, KeyRound, Copy, ToggleLeft, ToggleRight, Smartphone } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { BUSINESS_CONFIG } from '@/config/businessConfig'
 
@@ -586,13 +586,43 @@ export default function AdminTenantDetail() {
             )}
           </div>
         </div>
+
+          {/* WhatsApp Integration Toggle */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <Smartphone size={18} className="text-green-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">WhatsApp Integration</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Auto-send bills to customers after payment. Owner &amp; Admin only.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => updateTenant.mutate({ whatsapp_enabled: !tenant.whatsapp_enabled })}
+                disabled={updateTenant.isPending}
+                className="flex-shrink-0"
+              >
+                {tenant.whatsapp_enabled
+                  ? <ToggleRight size={36} className="text-green-500" />
+                  : <ToggleLeft  size={36} className="text-gray-300" />
+                }
+              </button>
+            </div>
+            {tenant.whatsapp_enabled && (
+              <p className="mt-3 text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
+                Enabled — owner &amp; admin can connect their WhatsApp number under Settings → WhatsApp.
+              </p>
+            )}
+          </div>
+
           <FeatureOverridesSection
             tenantId={parseInt(id)}
             currentOverrides={tenant.feature_overrides}
             businessType={tenant.business_type}
             onSaved={() => qc.invalidateQueries({ queryKey: ['admin-tenant', id] })}
           />
-        <AdminResetDataSection tenantId={parseInt(id)} />
         </>
       )}
 

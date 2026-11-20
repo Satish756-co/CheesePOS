@@ -20,7 +20,7 @@ const BOTTOM_NAV = [
   { to: '/app/users',    icon: Users,      label: 'Users & Roles',    permission: 'users' },
   { to: '/app/roles',     icon: Shield,      label: 'Role Permissions', permission: 'roles' },
   { to: '/app/outlets',   icon: Store,       label: 'Outlets',          permission: 'outlets' },
-  { to: '/app/whatsapp',  icon: Smartphone,  label: 'WhatsApp',         permission: null },
+  { to: '/app/whatsapp',  icon: Smartphone,  label: 'WhatsApp',         permission: null, whatsappOnly: true },
   { to: '/app/settings',  icon: Settings,    label: 'Settings',         permission: null },
   { to: '/app/support',   icon: Headphones,  label: 'Support',          permission: 'support' },
 ]
@@ -178,9 +178,12 @@ export default function CustomerLayout() {
 
   const bizNavItems = BUSINESS_CONFIG[tenant?.business_type]?.navItems || []
   const allNavItems = [...TOP_NAV, ...bizNavItems, ...BOTTOM_NAV]
-  const visibleItems = allNavItems.filter(item =>
-    item.permission === null || hasPermission(item.permission)
-  )
+  const visibleItems = allNavItems.filter(item => {
+    if (item.whatsappOnly) {
+      return tenant?.whatsapp_enabled && ['owner', 'admin'].includes(user?.role)
+    }
+    return item.permission === null || hasPermission(item.permission)
+  })
 
   const UserFooter = ({ expanded }) => (
     <div className="border-t border-sidebar-border p-4 flex-shrink-0">

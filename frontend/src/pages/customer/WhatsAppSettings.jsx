@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { whatsappAPI } from '@/api'
+import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
-import { Smartphone, CheckCircle, WifiOff, RefreshCw, Loader } from 'lucide-react'
+import { Smartphone, CheckCircle, WifiOff, RefreshCw, Loader, Lock } from 'lucide-react'
 
 const STATUS_POLL = {
   connected:      30_000,
@@ -15,6 +16,21 @@ const STATUS_POLL = {
 
 export default function WhatsAppSettings() {
   const qc = useQueryClient()
+  const { tenant, user } = useAuthStore()
+
+  if (!tenant?.whatsapp_enabled || !['owner', 'admin'].includes(user?.role)) {
+    return (
+      <div className="p-6 max-w-lg mx-auto">
+        <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
+          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <Lock size={22} className="text-gray-400" />
+          </div>
+          <p className="font-semibold text-gray-700">WhatsApp Not Available</p>
+          <p className="text-sm text-gray-400 mt-1">This feature has not been enabled for your account. Contact support to get it activated.</p>
+        </div>
+      </div>
+    )
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['whatsapp-status'],

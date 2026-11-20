@@ -135,7 +135,7 @@ def update_tenant(tenant_id):
     tenant = Tenant.query.get_or_404(tenant_id)
     data = request.get_json()
 
-    for field in ['status', 'notes', 'is_verified']:
+    for field in ['status', 'notes', 'is_verified', 'whatsapp_enabled']:
         if field in data:
             setattr(tenant, field, data[field])
 
