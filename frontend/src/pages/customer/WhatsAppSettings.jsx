@@ -56,6 +56,7 @@ export default function WhatsAppSettings() {
   const isConnected = status === 'connected'
   const isWaiting = ['initializing', 'loading', 'authenticated'].includes(status)
   const isQR = status === 'qr_ready'
+  const isError = status === 'error' || status === 'auth_failed'
 
   return (
     <div className="p-6 max-w-lg mx-auto">
@@ -80,6 +81,8 @@ export default function WhatsAppSettings() {
             <><Loader size={18} className="text-orange-500 animate-spin" /><span className="font-semibold text-orange-600">Waiting for scan…</span></>
           ) : isWaiting ? (
             <><Loader size={18} className="text-blue-500 animate-spin" /><span className="font-semibold text-blue-600">Connecting…</span></>
+          ) : isError ? (
+            <><WifiOff size={18} className="text-red-400" /><span className="font-semibold text-red-500">Connection failed</span></>
           ) : (
             <><WifiOff size={18} className="text-gray-400" /><span className="font-semibold text-gray-500">Not connected</span></>
           )}
@@ -104,6 +107,14 @@ export default function WhatsAppSettings() {
           </div>
         )}
 
+        {/* Error info */}
+        {isError && (
+          <div className="bg-red-50 rounded-xl p-4 mb-5 text-sm text-red-700">
+            <p className="font-medium">WhatsApp service failed to start.</p>
+            <p className="text-red-500 mt-1 text-xs">The browser engine on the server encountered an error. Contact your administrator.</p>
+          </div>
+        )}
+
         {/* Not connected info */}
         {!isConnected && !isQR && !isWaiting && (
           <div className="bg-gray-50 rounded-xl p-4 mb-5 text-sm text-gray-600 space-y-1">
@@ -121,7 +132,7 @@ export default function WhatsAppSettings() {
               className="btn-primary flex items-center gap-2"
             >
               <Smartphone size={16} />
-              Connect WhatsApp
+              {isError ? 'Retry Connection' : 'Connect WhatsApp'}
             </button>
           )}
           {(isQR || isWaiting) && (

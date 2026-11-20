@@ -31,6 +31,10 @@ function getOrCreate(tenantId) {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
+        '--no-zygote',
+        '--single-process',
+        '--disable-extensions',
+        '--no-first-run',
       ],
       headless: true,
     },
@@ -73,7 +77,7 @@ function getOrCreate(tenantId) {
   })
 
   client.initialize().catch(err => {
-    console.error(`[${key}] Init error: ${err.message}`)
+    console.error(`[${key}] Init error:`, err?.message || err)
     state.status = 'error'
   })
 
