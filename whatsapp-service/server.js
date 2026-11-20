@@ -46,6 +46,11 @@ function getOrCreate(tenantId) {
       clientId: `tenant_${key}`,
       dataPath: './sessions',
     }),
+    webVersion: '2.2412.54',
+    webVersionCache: {
+      type: 'remote',
+      remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
+    },
     puppeteer: {
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
       args: [
@@ -56,8 +61,10 @@ function getOrCreate(tenantId) {
         '--no-zygote',
         '--disable-extensions',
         '--no-first-run',
+        '--window-size=1280,800',
       ],
       headless: true,
+      defaultViewport: { width: 1280, height: 800 },
     },
   })
 
