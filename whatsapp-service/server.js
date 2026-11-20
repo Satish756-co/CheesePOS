@@ -19,14 +19,20 @@ function normalisePhone(phone) {
 
 // Remove stale Chromium profile locks left by previous (crashed/killed) containers
 function cleanupLocks(key) {
-  const profileDir = path.join('./sessions', '.wwebjs_auth', `session-tenant_${key}`)
-  const locks = [
-    path.join(profileDir, 'Default', 'SingletonLock'),
-    path.join(profileDir, 'SingletonLock'),
-  ]
-  for (const f of locks) {
-    try { fs.unlinkSync(f); console.log(`[${key}] Removed stale lock: ${f}`) } catch (_) {}
-  }
+  const sessionDir = path.join('./sessions', '.wwebjs_auth', `session-tenant_${key}`)
+  try {
+    if (!fs.existsSync(sessionDir)) return
+    const walk = (dir) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name)
+        if (entry.isDirectory()) { walk(full); continue }
+        if (entry.name === 'SingletonLock' || entry.name === 'SingletonSocket') {
+          try { fs.unlinkSync(full); console.log(`[${key}] Removed lock: ${full}`) } catch (_) {}
+        }
+      }
+    }
+    walk(sessionDir)
+  } catch (_) {}
 }
 
 function getOrCreate(tenantId) {
