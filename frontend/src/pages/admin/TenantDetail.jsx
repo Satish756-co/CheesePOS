@@ -277,6 +277,10 @@ function FeatureOverridesSection({ tenantId, currentOverrides, onSaved, business
   const qc = useQueryClient()
   const [overrides, setOverrides] = useState(() => currentOverrides || {})
 
+  useEffect(() => {
+    setOverrides(currentOverrides || {})
+  }, [currentOverrides])
+
   const featureList = BUSINESS_CONFIG[businessType]?.featureList || []
 
   if (featureList.length === 0) return null

@@ -564,45 +564,47 @@ def _send_welcome_email(app, email, business_name, owner_name, temp_password, bu
     # ── Business-type steps ──────────────────────────────────────────────────
     if business_type == 'saloon':
         steps_rows = [
-            ('✂️', 'Set up your services',
-             'Go to <strong>Services</strong> → add service categories, services with pricing, duration, and commission.'),
-            ('💅', 'Create packages & coupons',
+            ('1', 'Set up your services',
+             'Go to <b>Services</b> &rarr; add service categories, services with pricing, duration, and commission.'),
+            ('2', 'Create packages &amp; coupons',
              'Bundle services into combo packages. Add discount coupons for promotions and loyal customers.'),
-            ('💰', 'Create your first bill',
-             'Open <strong>Billing</strong>, pick a customer, select services or packages, apply a coupon if needed, and collect payment.'),
-            ('📊', 'Track revenue & performance',
-             'The <strong>Dashboard</strong> shows daily revenue, top services, and staff performance. <strong>Bills Log</strong> lists every transaction.'),
+            ('3', 'Create your first bill',
+             'Open <b>Billing</b>, pick a customer, select services or packages, apply a coupon if needed, and collect payment.'),
+            ('4', 'Track revenue &amp; performance',
+             'The <b>Dashboard</b> shows daily revenue, top services, and staff performance. <b>Bills Log</b> lists every transaction.'),
         ]
     else:
         steps_rows = [
-            ('🏪', 'Set up your space',
-             'Go to <strong>Settings → Outlets</strong> to add your outlet details, then configure tables under <strong>Tables</strong>.'),
-            ('🍽️', 'Build your menu',
-             'Add product categories and items in <strong>Products</strong>. Set prices, variants (e.g. 500 ml / 750 ml), and tax rates.'),
-            ('📋', 'Start taking orders',
-             'Use <strong>Table Billing</strong> for dine-in orders or <strong>Counter Billing</strong> for quick counter sales.'),
-            ('📊', 'Track your business',
-             'View daily summaries in <strong>Dashboard</strong>, monitor stock in <strong>Inventory</strong>, and export reports anytime.'),
+            ('1', 'Set up your space',
+             'Go to <b>Settings &rarr; Outlets</b> to add your outlet details, then configure tables under <b>Tables</b>.'),
+            ('2', 'Build your menu',
+             'Add product categories and items in <b>Products</b>. Set prices, variants (e.g. 500 ml / 750 ml), and tax rates.'),
+            ('3', 'Start taking orders',
+             'Use <b>Table Billing</b> for dine-in orders or <b>Counter Billing</b> for quick counter sales.'),
+            ('4', 'Track your business',
+             'View daily summaries in <b>Dashboard</b>, monitor stock in <b>Inventory</b>, and export reports anytime.'),
         ]
 
     steps_html = ''.join(f"""
       <tr>
-        <td style="padding:16px 0;vertical-align:top;border-bottom:1px solid #f3f4f6;">
-          <table style="border-collapse:collapse;width:100%"><tr>
-            <td style="width:44px;vertical-align:top;padding-right:12px;">
-              <div style="width:40px;height:40px;border-radius:50%;background:#fff7ed;display:flex;align-items:center;justify-content:center;font-size:20px;text-align:center;line-height:40px;">
-                {icon}
-              </div>
-            </td>
-            <td style="vertical-align:top;">
-              <p style="margin:0 0 4px;font-size:15px;font-weight:bold;color:#111827;">Step {i}. {title}</p>
-              <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;">{desc}</p>
-            </td>
-          </tr></table>
+        <td style="padding:0 0 20px 0;vertical-align:top;">
+          <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;">
+            <tr>
+              <td style="width:36px;vertical-align:top;padding-right:14px;">
+                <div style="width:32px;height:32px;border-radius:50%;background:#f97316;text-align:center;line-height:32px;font-size:14px;font-weight:bold;color:#fff;">
+                  {step}
+                </div>
+              </td>
+              <td style="vertical-align:top;padding-top:4px;">
+                <p style="margin:0 0 4px 0;font-size:15px;font-weight:700;color:#111827;font-family:Arial,sans-serif;">{title}</p>
+                <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;font-family:Arial,sans-serif;">{desc}</p>
+              </td>
+            </tr>
+          </table>
         </td>
-      </tr>""" for i, (icon, title, desc) in enumerate(steps_rows, 1))
+      </tr>""" for step, title, desc in steps_rows)
 
-    biz_label = 'Saloon' if business_type == 'saloon' else 'Bar &amp; Restaurant'
+    biz_label = 'Saloon / Spa' if business_type == 'saloon' else 'Bar &amp; Restaurant'
 
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -611,135 +613,140 @@ def _send_welcome_email(app, email, business_name, owner_name, temp_password, bu
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Welcome to CheesePOS</title>
 </head>
-<body style="margin:0;padding:0;background:#f1f5f9;">
-<style>
-  @keyframes flapOpen {{
-    0%   {{ transform: perspective(600px) rotateX(0deg); opacity:1; }}
-    45%  {{ transform: perspective(600px) rotateX(-170deg); opacity:0.9; }}
-    100% {{ transform: perspective(600px) rotateX(-180deg); opacity:0; visibility:hidden; }}
-  }}
-  @keyframes letterRise {{
-    0%   {{ opacity:0; transform:translateY(40px); }}
-    100% {{ opacity:1; transform:translateY(0); }}
-  }}
-  @keyframes fadeIn {{
-    from {{ opacity:0; }} to {{ opacity:1; }}
-  }}
-  .env-flap     {{ transform-origin: top center; animation: flapOpen 1.4s cubic-bezier(.4,0,.2,1) 0.6s both; backface-visibility:hidden; }}
-  .letter-body  {{ animation: letterRise 0.9s ease-out 1.5s both; }}
-  .footer-block {{ animation: fadeIn 0.8s ease-out 2.2s both; }}
-</style>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,sans-serif;">
 
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 0;">
-<tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 16px;">
+<tr>
+  <td align="center">
 
-  <!-- ═══ ENVELOPE WRAPPER ═══ -->
-  <tr><td style="position:relative;">
-    <div style="position:relative;overflow:hidden;">
+    <!-- Email container -->
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
 
-      <!-- Envelope body (orange background) -->
-      <div style="background:linear-gradient(145deg,#f97316 0%,#ea580c 100%);min-height:280px;position:relative;text-align:center;padding-bottom:40px;">
-
-        <!-- Bottom-left fold line -->
-        <div style="position:absolute;bottom:0;left:0;width:0;height:0;border-bottom:80px solid #c2410c;border-right:300px solid transparent;"></div>
-        <!-- Bottom-right fold line -->
-        <div style="position:absolute;bottom:0;right:0;width:0;height:0;border-bottom:80px solid #c2410c;border-left:300px solid transparent;"></div>
-
-        <!-- Main envelope text (always visible) -->
-        <div style="position:relative;z-index:2;padding:48px 40px 24px;">
-          <p style="margin:0 0 4px;font-size:12px;font-weight:bold;letter-spacing:3px;color:rgba(255,255,255,0.75);text-transform:uppercase;">CheesePOS</p>
-          <h1 style="margin:0;font-size:58px;font-weight:900;color:#fff;line-height:1;font-family:Georgia,'Times New Roman',serif;text-shadow:0 3px 12px rgba(0,0,0,0.25);">welcome</h1>
-          <h2 style="margin:0;font-size:46px;font-weight:700;font-style:italic;color:rgba(255,255,255,0.95);font-family:Georgia,'Times New Roman',serif;text-shadow:0 2px 8px rgba(0,0,0,0.2);">on board.</h2>
-          <p style="margin:16px 0 0;font-size:14px;color:rgba(255,255,255,0.85);letter-spacing:0.5px;">
-            Your <strong style="color:#fff;">{html_mod.escape(business_name)}</strong> account is activated ✨
+      <!-- Header -->
+      <tr>
+        <td style="background-color:#f97316;padding:40px 40px 32px 40px;text-align:center;">
+          <p style="margin:0 0 20px 0;font-size:13px;font-weight:700;letter-spacing:3px;color:rgba(255,255,255,0.75);text-transform:uppercase;font-family:Arial,sans-serif;">CHEESEPOS</p>
+          <div style="width:72px;height:72px;background-color:rgba(255,255,255,0.15);border-radius:50%;margin:0 auto 20px auto;text-align:center;line-height:72px;font-size:34px;">
+            &#127881;
+          </div>
+          <h1 style="margin:0 0 8px 0;font-size:36px;font-weight:900;color:#ffffff;font-family:Arial,sans-serif;line-height:1.1;">Welcome aboard!</h1>
+          <p style="margin:0;font-size:15px;color:rgba(255,255,255,0.9);font-family:Arial,sans-serif;">
+            Your <b style="color:#ffffff;">{html_mod.escape(business_name)}</b> account is live &#10024;
           </p>
-        </div>
+        </td>
+      </tr>
 
-        <!-- Animated flap (top triangle) — folds open on load -->
-        <div class="env-flap" style="position:absolute;top:0;left:0;right:0;z-index:3;">
-          <div style="width:0;height:0;border-left:300px solid transparent;border-right:300px solid transparent;border-top:160px solid #fb923c;margin:0 auto;"></div>
-          <!-- Pink seal line (decorative) -->
-          <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:2px;height:160px;background:linear-gradient(to bottom,rgba(236,72,153,0.7),transparent);"></div>
-        </div>
-
-      </div>
-    </div>
-  </td></tr>
-
-  <!-- ═══ LETTER CONTENT ═══ -->
-  <tr><td>
-    <div class="letter-body" style="background:#fff;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;padding:40px;">
-
-      <p style="margin:0 0 8px;font-size:18px;color:#111827;">
-        Hi <strong>{html_mod.escape(owner_name)}</strong> 👋
-      </p>
-      <p style="margin:0 0 28px;font-size:14px;color:#6b7280;line-height:1.6;">
-        Your <strong style="color:#374151;">{html_mod.escape(business_name)}</strong> ({biz_label}) account is now live.
-        Below are your login credentials — keep them safe.
-      </p>
+      <!-- Greeting -->
+      <tr>
+        <td style="padding:36px 40px 0 40px;">
+          <p style="margin:0 0 8px 0;font-size:18px;font-weight:700;color:#111827;font-family:Arial,sans-serif;">
+            Hi {html_mod.escape(owner_name)},
+          </p>
+          <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.7;font-family:Arial,sans-serif;">
+            Your <b style="color:#374151;">{html_mod.escape(business_name)}</b> ({biz_label}) account has been created on CheesePOS.
+            Here are your login credentials — keep them safe and do not share them.
+          </p>
+        </td>
+      </tr>
 
       <!-- Credentials card -->
-      <div style="background:#fafafa;border:2px solid #fed7aa;border-radius:12px;padding:24px;margin-bottom:24px;">
-        <p style="margin:0 0 16px;font-size:11px;font-weight:bold;color:#ea580c;letter-spacing:2px;text-transform:uppercase;">Your Login Details</p>
-        <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
-          <tr>
-            <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;width:150px;">📧 Email</td>
-            <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#111827;font-weight:bold;">{html_mod.escape(email)}</td>
-          </tr>
-          <tr>
-            <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;">🔑 Temp Password</td>
-            <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#111827;font-weight:bold;font-family:monospace;font-size:20px;letter-spacing:3px;">{html_mod.escape(temp_password)}</td>
-          </tr>
-          <tr>
-            <td style="padding:10px 0;color:#6b7280;">🔗 App URL</td>
-            <td style="padding:10px 0;">
-              <a href="{login_url}" style="color:#ea580c;font-weight:bold;font-size:14px;text-decoration:none;">{login_url}</a>
-            </td>
-          </tr>
-        </table>
-      </div>
+      <tr>
+        <td style="padding:24px 40px 0 40px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fff7ed;border:2px solid #fed7aa;border-radius:12px;overflow:hidden;">
+            <tr>
+              <td style="background-color:#ea580c;padding:12px 20px;">
+                <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:2px;color:#fff;text-transform:uppercase;font-family:Arial,sans-serif;">Your Login Details</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 20px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding:14px 0;border-bottom:1px solid #fed7aa;font-size:13px;color:#9a3412;width:130px;font-family:Arial,sans-serif;">&#128231; Email</td>
+                    <td style="padding:14px 0;border-bottom:1px solid #fed7aa;font-size:14px;font-weight:700;color:#111827;font-family:Arial,sans-serif;">{html_mod.escape(email)}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:14px 0;border-bottom:1px solid #fed7aa;font-size:13px;color:#9a3412;font-family:Arial,sans-serif;">&#128273; Password</td>
+                    <td style="padding:14px 0;border-bottom:1px solid #fed7aa;font-size:20px;font-weight:700;color:#111827;font-family:Courier New,monospace;letter-spacing:3px;">{html_mod.escape(temp_password)}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:14px 0;font-size:13px;color:#9a3412;font-family:Arial,sans-serif;">&#128279; Login URL</td>
+                    <td style="padding:14px 0;font-family:Arial,sans-serif;">
+                      <a href="{login_url}" style="color:#ea580c;font-size:13px;font-weight:700;text-decoration:none;">{login_url}</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
 
       <!-- CTA button -->
-      <div style="text-align:center;margin-bottom:28px;">
-        <a href="{login_url}"
-           style="display:inline-block;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;padding:15px 44px;border-radius:50px;font-size:16px;font-weight:bold;text-decoration:none;letter-spacing:0.5px;box-shadow:0 4px 16px rgba(249,115,22,0.45);">
-          Open CheesePOS &rarr;
-        </a>
-      </div>
+      <tr>
+        <td style="padding:28px 40px 0 40px;text-align:center;">
+          <a href="{login_url}" style="display:inline-block;background-color:#f97316;color:#ffffff;padding:16px 48px;border-radius:50px;font-size:16px;font-weight:700;text-decoration:none;font-family:Arial,sans-serif;">
+            Open CheesePOS &rarr;
+          </a>
+        </td>
+      </tr>
 
-      <!-- First-login notice -->
-      <div style="background:#fff7ed;border-left:4px solid #f97316;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:36px;font-size:13px;color:#9a3412;line-height:1.5;">
-        <strong>🔐 First login:</strong> You will be prompted to set a new password immediately.
-        Please choose a strong password and keep it private.
-      </div>
+      <!-- Password notice -->
+      <tr>
+        <td style="padding:24px 40px 0 40px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fff7ed;border-left:4px solid #f97316;border-radius:0 8px 8px 0;">
+            <tr>
+              <td style="padding:14px 18px;font-size:13px;color:#9a3412;line-height:1.6;font-family:Arial,sans-serif;">
+                &#128274; <b>First login:</b> You will be asked to set a new password immediately.
+                Choose a strong password and keep it private.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Divider -->
+      <tr>
+        <td style="padding:32px 40px 0 40px;">
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:0;" />
+        </td>
+      </tr>
 
       <!-- Getting started -->
-      <p style="margin:0 0 16px;font-size:16px;font-weight:bold;color:#111827;">Getting started</p>
-      <table width="100%" cellpadding="0" cellspacing="0">
-        {steps_html}
-      </table>
+      <tr>
+        <td style="padding:28px 40px 0 40px;">
+          <p style="margin:0 0 20px 0;font-size:17px;font-weight:700;color:#111827;font-family:Arial,sans-serif;">&#128640; Getting started</p>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            {steps_html}
+          </table>
+        </td>
+      </tr>
 
-    </div>
-  </td></tr>
+      <!-- Footer -->
+      <tr>
+        <td style="background-color:#1e293b;padding:28px 40px;text-align:center;margin-top:12px;">
+          <p style="margin:0 0 6px 0;font-size:16px;font-weight:700;color:#ffffff;font-family:Arial,sans-serif;">CheesePOS</p>
+          <p style="margin:0 0 12px 0;font-size:12px;color:#94a3b8;font-family:Arial,sans-serif;">
+            Nellore, Andhra Pradesh &ndash; 524002, India
+          </p>
+          <p style="margin:0 0 12px 0;font-size:12px;color:#94a3b8;font-family:Arial,sans-serif;">
+            Questions? <a href="mailto:cheesepossupport@gmail.com" style="color:#fb923c;text-decoration:none;">cheesepossupport@gmail.com</a>
+          </p>
+          <p style="margin:0;font-size:11px;color:#475569;font-family:Arial,sans-serif;">
+            This email was sent because an account was created for {html_mod.escape(email)}.
+            If you didn't expect this, contact us at
+            <a href="mailto:cheesepossupport@gmail.com" style="color:#fb923c;text-decoration:none;">cheesepossupport@gmail.com</a>
+          </p>
+        </td>
+      </tr>
 
-  <!-- ═══ FOOTER ═══ -->
-  <tr><td>
-    <div class="footer-block" style="background:#1e293b;border-radius:0 0 12px 12px;padding:28px 40px;text-align:center;">
-      <p style="margin:0 0 8px;color:#fff;font-weight:bold;font-size:15px;">CheesePOS</p>
-      <p style="margin:0 0 12px;font-size:12px;color:#94a3b8;">
-        Questions? Contact us at
-        <a href="mailto:cheesepossupport@gmail.com" style="color:#fb923c;text-decoration:none;">cheesepossupport@gmail.com</a>
-      </p>
-      <p style="margin:0;font-size:11px;color:#475569;">
-        You received this email because an account was created for {html_mod.escape(email)}.
-      </p>
-    </div>
-  </td></tr>
+    </table>
+    <!-- end container -->
 
+  </td>
+</tr>
 </table>
-</td></tr>
-</table>
+
 </body>
 </html>"""
 
@@ -885,6 +892,7 @@ def create_tenant():
         address=data.get('address', ''),
         city=data.get('city', ''),
         state=data.get('state', ''),
+        outlet_type=business_type,
         is_active=True,
     )
     db.session.add(outlet)
@@ -923,9 +931,13 @@ def delete_tenant(tenant_id):
 # ─── Admin: per-tenant feature overrides ─────────────────────────────────────
 
 ALLOWED_FEATURE_KEYS = [
+    # Bar & Restaurant
     'billing', 'table_billing', 'tables', 'orders', 'sales_log', 'kot',
     'products', 'inventory', 'purchases', 'expenses', 'reports',
     'users', 'roles', 'outlets', 'dashboard', 'support',
+    # Salon / Spa
+    'salon_summary', 'salon_billing', 'salon_bills_log',
+    'salon_services', 'salon_coupons',
 ]
 
 @admin_bp.route('/tenants/<int:tenant_id>/feature-overrides', methods=['PUT'])
@@ -1122,6 +1134,7 @@ def approve_onboarding_request(req_id):
         city=city,
         state=state,
         pincode=pincode,
+        outlet_type=business_type,
         is_active=True,
     )
     db.session.add(outlet)

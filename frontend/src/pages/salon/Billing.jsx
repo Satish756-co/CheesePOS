@@ -119,10 +119,14 @@ function AvailableCoupons({ coupons, subtotal, onApply, appliedCode }) {
   )
 }
 
-function PaymentModal({ cart, subtotal, onClose, onConfirm, loading, users, outletId, tenant }) {
+function PaymentModal({ cart, subtotal, onClose, onConfirm, loading, users, outletId, tenant, currentUserId }) {
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
-  const [staffId, setStaffId] = useState('')
+  const [staffId, setStaffId] = useState(() => {
+    const activeUsers = (users || []).filter(u => u.is_active)
+    const match = activeUsers.find(u => u.id === currentUserId)
+    return match ? String(match.id) : ''
+  })
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [couponCode, setCouponCode] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState(null)
@@ -317,7 +321,7 @@ function PaymentModal({ cart, subtotal, onClose, onConfirm, loading, users, outl
 }
 
 export default function SalonBilling() {
-  const { tenant } = useAuthStore()
+  const { tenant, user } = useAuthStore()
   const { outlets, defaultOutletId } = useUserOutlets()
   const qc = useQueryClient()
   const [selectedCategory, setSelectedCategory] = useState(null)
@@ -545,6 +549,7 @@ export default function SalonBilling() {
           users={users}
           outletId={outletId}
           tenant={tenant}
+          currentUserId={user?.id}
           loading={createBillMutation.isPending}
           onClose={() => setShowPayment(false)}
           onConfirm={(data) => createBillMutation.mutate(data)}

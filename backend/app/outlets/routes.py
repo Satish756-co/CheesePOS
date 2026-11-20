@@ -49,7 +49,7 @@ def create_outlet():
         tenant_id=tenant_id,
         outlet_code=outlet_code,
         name=data['name'],
-        outlet_type=data.get('outlet_type', 'bar_restaurant'),
+        outlet_type=data.get('outlet_type') or tenant.business_type,
         phone=data.get('phone'),
         email=data.get('email'),
         address=data.get('address'),
