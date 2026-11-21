@@ -200,7 +200,7 @@ function PaymentModal({ cart, subtotal, onClose, onConfirm, loading, users, outl
       subtotal,
       total,
       items: cart.map(item => ({
-        item_type: item.type,
+        item_type: item.type === 'package' ? 'package' : 'service',
         service_id: item.type === 'service' ? item.id : null,
         package_id: item.type === 'package' ? item.id : null,
         item_name: item.name,
@@ -342,6 +342,11 @@ export default function SalonBilling() {
   const [search, setSearch] = useState('')
   const [selectedOutlet, setSelectedOutlet] = useState(null)
 
+  // Additional (custom) service form
+  const [showCustom, setShowCustom] = useState(false)
+  const [customName, setCustomName] = useState('')
+  const [customAmount, setCustomAmount] = useState('')
+
   const outletId = selectedOutlet ?? defaultOutletId
 
   const { data: categories = [] } = useQuery({
@@ -400,6 +405,23 @@ export default function SalonBilling() {
       }
       return [...prev, { ...item, type, cartKey: key, qty: 1 }]
     })
+  }
+
+  const handleAddCustom = () => {
+    const amount = parseFloat(customAmount)
+    if (!customName.trim() || isNaN(amount) || amount <= 0) return
+    const key = `custom-${Date.now()}`
+    setCart(prev => [...prev, {
+      id: null,
+      name: customName.trim(),
+      price: amount,
+      type: 'custom',
+      cartKey: key,
+      qty: 1,
+    }])
+    setCustomName('')
+    setCustomAmount('')
+    setShowCustom(false)
   }
 
   const removeFromCart = (cartKey) => setCart(prev => prev.filter(c => c.cartKey !== cartKey))
@@ -498,6 +520,54 @@ export default function SalonBilling() {
             </div>
           )}
         </div>
+
+        {/* Additional service entry */}
+        <div className="p-3 border-t border-gray-100 flex-shrink-0">
+          {!showCustom ? (
+            <button
+              onClick={() => setShowCustom(true)}
+              className="w-full text-sm text-brand-600 font-medium flex items-center gap-2 justify-center py-2 border border-dashed border-brand-300 rounded-lg hover:bg-brand-50 transition-colors"
+            >
+              <Plus size={14} />
+              Add Additional Service
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-800">Additional Service</p>
+                <button
+                  onClick={() => { setShowCustom(false); setCustomName(''); setCustomAmount('') }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <input
+                className="input text-sm"
+                placeholder="Service name *"
+                value={customName}
+                onChange={e => setCustomName(e.target.value)}
+                autoFocus
+              />
+              <input
+                type="number"
+                className="input text-sm"
+                placeholder="Amount (₹) *"
+                value={customAmount}
+                onChange={e => setCustomAmount(e.target.value)}
+                min="0.01"
+                step="0.01"
+              />
+              <button
+                onClick={handleAddCustom}
+                disabled={!customName.trim() || !customAmount || Number(customAmount) <= 0}
+                className="w-full btn-primary text-sm py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add to Bill
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Right — cart */}
@@ -517,7 +587,12 @@ export default function SalonBilling() {
               {cart.map(item => (
                 <div key={item.cartKey} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2.5">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
+                      {item.type === 'custom' && (
+                        <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-semibold flex-shrink-0">Custom</span>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-500">{formatCurrency(item.price)} × {item.qty}</p>
                   </div>
                   <div className="flex items-center gap-1">
