@@ -14,7 +14,7 @@ from app.auth.routes import log_audit
 users_bp = Blueprint('users', __name__)
 
 # Roles that can be configured (owner and super_admin always have full access)
-CONFIGURABLE_ROLES = ['admin', 'manager', 'cashier', 'waiter', 'kitchen', 'inventory_manager', 'accountant']
+CONFIGURABLE_ROLES = ['admin', 'manager', 'cashier', 'waiter', 'kitchen', 'inventory_manager', 'accountant', 'employee']
 
 
 @users_bp.route('/', methods=['GET'])

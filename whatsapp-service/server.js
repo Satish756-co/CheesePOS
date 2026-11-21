@@ -41,16 +41,23 @@ function getOrCreate(tenantId) {
 
   cleanupLocks(key)
 
+  // Read the version that entrypoint.sh pre-downloaded from GitHub (bypasses CDN)
+  let cachedVersion = null
+  try {
+    const v = fs.readFileSync('./sessions/wa-cache/.version', 'utf8').trim()
+    if (v) { cachedVersion = v; console.log(`[${key}] Using pre-cached WA version: ${v}`) }
+  } catch (_) {}
+
   const client = new Client({
     authStrategy: new LocalAuth({
       clientId: `tenant_${key}`,
       dataPath: './sessions',
     }),
-    authTimeoutMs: 300000,  // 5 minutes — give user time to scan; 0 falls through to 60s default
-    webVersion: '2.3000.1017673279',
+    authTimeoutMs: 300000,
+    ...(cachedVersion ? { webVersion: cachedVersion } : {}),
     webVersionCache: {
-      type: 'remote',
-      remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/',
+      type: 'local',
+      path: './sessions/wa-cache',
     },
     puppeteer: {
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,

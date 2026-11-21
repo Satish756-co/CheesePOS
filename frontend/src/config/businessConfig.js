@@ -306,6 +306,7 @@ export const BUSINESS_CONFIG = {
       { key: 'admin',             label: 'Admin',             color: 'badge-red' },
       { key: 'manager',           label: 'Manager',           color: 'badge-blue' },
       { key: 'cashier',           label: 'Receptionist',      color: 'badge-green' },
+      { key: 'employee',          label: 'Employee',          color: 'badge-blue' },
       { key: 'inventory_manager', label: 'Inventory Manager', color: 'badge-gray' },
       { key: 'accountant',        label: 'Accountant',        color: 'badge-gray' },
     ],
@@ -316,6 +317,7 @@ export const BUSINESS_CONFIG = {
                 'expenses', 'reports', 'users', 'roles', 'outlets'],
       manager: ['dashboard', 'salon_billing', 'salon_bills_log', 'salon_services', 'salon_summary', 'expenses', 'reports'],
       cashier: ['dashboard', 'salon_billing', 'salon_bills_log'],
+      employee: ['dashboard', 'salon_billing', 'salon_bills_log'],
     },
   },
 }

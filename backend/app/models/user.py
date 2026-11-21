@@ -14,6 +14,7 @@ ROLES = {
     'kitchen': 'Kitchen Staff',
     'inventory_manager': 'Inventory Manager',
     'accountant': 'Accountant',
+    'employee': 'Employee',
 }
 
 ROLE_PERMISSIONS = {
@@ -26,6 +27,7 @@ ROLE_PERMISSIONS = {
     'kitchen': ['kot.view', 'kot.update'],
     'inventory_manager': ['inventory.*', 'purchases.*', 'suppliers.*'],
     'accountant': ['reports.*', 'expenses.view', 'billing.view'],
+    'employee': ['billing.create', 'billing.view', 'billing.cancel_own'],
 }
 
 # Default page/action/approval configs per role — used when no tenant override exists
@@ -95,6 +97,12 @@ ROLE_DEFAULT_CONFIGS = {
         'pages': ['dashboard', 'expenses', 'reports', 'sales_log', 'salon_bills_log'],
         'actions': ['reports.view', 'reports.export', 'expenses.view', 'billing.view'],
         'approvals': [],
+        'data_scope': 'all',
+    },
+    'employee': {
+        'pages': ['dashboard', 'salon_billing', 'salon_bills_log'],
+        'actions': ['billing.view', 'billing.create', 'billing.cancel_own'],
+        'approvals': ['billing.cancel'],
         'data_scope': 'all',
     },
 }

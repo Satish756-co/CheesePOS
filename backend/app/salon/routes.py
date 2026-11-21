@@ -584,7 +584,7 @@ def create_bill():
             )
             send_message_async(tenant_id, bill.customer_phone, msg)
         except Exception as e:
-            current_app.logger.warning(f'WhatsApp bill send skipped: {e}')
+            print(f'WhatsApp bill send skipped: {e}', flush=True)
 
     return jsonify(bill.to_dict(include_items=True)), 201
 
